@@ -1,9 +1,9 @@
 package org.usfirst.frc.team2228.robot;
 
 
-
+import org.usfirst.frc.team2228.robot.sensors.AngleIF;
 import org.usfirst.frc.team2228.robot.oi.DriveBaseTeleopControl;
-import org.usfirst.frc.team2228.oi.DriverIF;
+import org.usfirst.frc.team2228.robot.oi.DriverIF;
 import org.usfirst.frc.team2228.robot.test.SRXDriveBaseTest;
 import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBase;
 
@@ -24,6 +24,7 @@ public class Robot extends IterativeRobot {
 	private SRXDriveBase driveBase;
 	private SRXDriveBaseTest testSRXDriveBase;
 	private DriverIF driverIF;
+	private AngleIF angleIF;
 	private DriveBaseTeleopControl driveBaseTelop;
 	
 	private boolean isConsoleDataEnabled = false;
@@ -37,6 +38,7 @@ public class Robot extends IterativeRobot {
 
 		// Create object instances
 		driverIF = new DriverIF();
+		angelIF = new AngleIF();
 		driveBase = new SRXDriveBase();
 		driveBaseTelop = new DriveBaseTeleopControl(driverIF, driveBase);
 		testSRXDriveBase = new SRXDriveBaseTest;

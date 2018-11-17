@@ -15,7 +15,7 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 // ===================================
 // SET COMMANDS
 // ===================================
-// public void Init()
+// public void init()
 
 // public void setEnableConsoleData(boolean _consoleData)
 // public void setMecanumShiftEnable(boolean _mecanumShiftState)
@@ -30,7 +30,7 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 // public void setStopMotors()
 // public void setDriveBaseRamp(double _SecToMaxPower)
 
-// public void clearSRXDriveBasePrgFlgs()
+// private void clearSRXDriveBasePrgFlgs()
 		
 // ===================================
 // GET COMMANDS
@@ -88,27 +88,29 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 //					   boolean _MoveSideways)
 // *******
 //
-// ******
-// public boolean SRXmove(int    _rightCruiseVel, 
-//					   int    _rightAccel, 
-//					   double _rightDistance, 
-//					   int    _leftCruiseVel,	
-//					   int    _leftAccel, 
-//					   double _leftDistance)
-// ******
-//
 // *******
 // public boolean rotate(double _RotateAngleDeg, 
 //						 double _RotatePwrLevel)
 // *******
-
-
+//
 // *******
 // public boolean turn(double   _TurnAngleDeg, 
 //					   double   _TurnRadiusIn, 
 //					   double   _TurnPowerLevel, 
 //					   boolean  _isRobotDirectionRev)
 // *******
+//
+// ******
+// public boolean SRXmove(int    _rightCruiseVel, 
+//					   int    _rightAccel, 
+//					   double _rightDistance, 
+//					   int    _leftCruiseVel,	
+//					   int    _leftAccel, 
+//					   double _leftDistance,
+//					   double _indexFaultTimeSec)
+// distanceIF.collisionDetected
+// ******
+
 
 
 
@@ -123,6 +125,9 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 
 
 //Carrying over the classes from other libraries
+import org.usfirst.frc.team2228.robot.sensors.AngleIF;
+import org.usfirst.frc.team2228.robot.sensors.DistanceIF;
+
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
@@ -152,7 +157,9 @@ public class SRXDriveBase {
 	private WPI_TalonSRX rightFollowerMtr;
 	private WPI_TalonSRX leftMasterMtr;
 	private WPI_TalonSRX leftFollowerMtr;
-
+	private AngleIF angleIF;
+	private DistanceIF distanceIF;
+	
 	
 	// ===================================
 	// SRX MOTION PROFILE
@@ -240,7 +247,7 @@ public class SRXDriveBase {
 	private boolean isLoggingDataEnabled = false;
 	private boolean islogSRXDriveActive = false;
 	
-	private boolean isTurnToAngleActive = false;
+	private boolean isTrapezoidalTurnToAngleActive = false;
 	private boolean isSRXMoveActive = false;
 	private boolean isStdTrapezoidalRotateActive = false;
 	private boolean isStdTrapezoidalMoveActive = false;
@@ -261,6 +268,9 @@ public class SRXDriveBase {
 		rightFollowerMtr = new TalonSRX(RobotMap.RIGHT_FOLLOWER_MTR_CAN_ID);
 		leftMasterMtr = new TalonSRX(RobotMap.LEFT_MSTR_MTR_CAN_ID);
 		leftFollowerMtr = new TalonSRX(RobotMap.LEFT_FOLLOWER_MTR_CAN_ID);
+
+		angleIF = new AngleIF();
+		distanceIF = new DistanceIF();
 
 		// RIGHT MOTORS===========================================
 		// =======================================================
@@ -427,9 +437,9 @@ public class SRXDriveBase {
 	public void setMecanumShiftEnable(boolean _mecanumShiftState){
 		isMecanumShiftEnabled = _mecanumShiftState;
 	}
-	public void Init() {
+	public void init() {
 		// Clear SRXDriveBase program control flags
-		setInitialStateForSRXDrvBasePrgFlgs();
+		clearSRXDrvBasePrgFlgs();
 		
 		// Load smart dashboard and shuffle board parameters
 		loadSmartDashBoardParmeters();
@@ -464,12 +474,11 @@ public class SRXDriveBase {
 	}
 	
 	// Clear all program control flags
-	public void clearSRXDrvBasePrgFlgs() {
-		
-		isTurnToAngleActive = false;
-		isSRXMoveActive = false;
-		isStdTrapezoidalRotateActive = false;
+	private void clearSRXDrvBasePrgFlgs() {
 		isStdTrapezoidalMoveActive = false;
+		isStdTrapezoidalRotateActive = false;
+		isTrapezoidalTurnToAngleActive = false;
+		isSRXMoveActive = false;
 		isSensorCorrectionActive = false;
 		isMecanumShiftEnabled = false;
 		isSRXProfileMoveActive = false;
@@ -736,7 +745,7 @@ public class SRXDriveBase {
 			leftCmdLevel = _throttleValue + (_turnValue/2);
 			rightCmdLevel = ((_throttleValue* SRXDriveBaseCfg.kDriveStraightFwdCorrection) - (_turnValue/2));
 			
-			
+		// todo - relook at this process	
 		// Determine drive straight correction if enabled
 		if (SRXDriveBaseCfg.isDriveStraightAssistEnabled && Math.abs(_turnValue) < SRXDriveBaseCfg.kSpeedDeadBand){
 			
@@ -803,7 +812,8 @@ public class SRXDriveBase {
 							   RightDistanceCnts, 
 							   LeftCruiseVelNativeUnits, 
 							   LeftAccelNativeUnits, 
-							   LeftDistanceCnts)){
+							   LeftDistanceCnts,
+							   (LeftMoveTimeSec + 1)){
 			isStdTrapezoidalMoveActive = false;
 			methodTime = Timer.getFPGATimestamp() - methodStartTime;
 			msg("Std Trap Move (Sec) = " + methodTime);
@@ -866,8 +876,8 @@ public class SRXDriveBase {
 						double  _TurnPowerLevel, 
 						boolean _isRobotDirectionRev) {
 		
-		if (!isTurnToAngleActive) {
-			isTurnToAngleActive = true;
+		if (!isTrapezoidalTurnToAngleActive) {
+			isTrapezoidalTurnToAngleActive = true;
 			methodStartTime = Timer.getFPGATimestamp();
 			msg("MAGIC MOVE TURN TO ANGLE ACTIVE===========================");
 			
@@ -958,7 +968,7 @@ public class SRXDriveBase {
 			
 					
 					if (!delay(1)) {
-						isTurnToAngleActive = false;
+						isTrapezoidalTurnToAngleActive = false;
 						RightCruiseVel = 0;
 						LeftCruiseVel = 0;
 						methodTime = Timer.getFPGATimestamp() - methodStartTime;
@@ -981,7 +991,7 @@ public class SRXDriveBase {
 									leftSensorPositionRead, 
 									rightSensorPositionRead);
 		}
-		return isTurnToAngleActive;
+		return isTrapezoidalTurnToAngleActive;
 	}
 	
 	// This method performs a SRX magic motion command from user calculated values
@@ -992,7 +1002,8 @@ public class SRXDriveBase {
 						   double _rightDistance, 
 						   int    _leftCruiseVel,	
 						   int    _leftAccel, 
-						   double _leftDistance) {
+						   double _leftDistance,
+						   double _indexFaultTimeSec) {
 		
 		leftSensorPositionRead = getLeftSensorPosition();
 		rightSensorPositionRead = getRightSensorPosition();
@@ -1022,7 +1033,10 @@ public class SRXDriveBase {
 			SRXMotioRightPos = rightMasterMtr.getActiveTrajectoryPosition();
 			SRXMotioRightVel = rightMasterMtr.getActiveTrajectoryVelocity();
 			
-			if ((Math.abs(SRXMotionLeftPos) >= Math.abs(_leftDistance)) && (Math.abs(SRXMotioRightPos) >= Math.abs(_rightDistance))) {
+			if (((Math.abs(SRXMotionLeftPos) >= Math.abs(_leftDistance)) 
+					&& (Math.abs(SRXMotioRightPos) >= Math.abs(_rightDistance)))
+					|| distanceIF.collisionDetected()
+			        || ((Timer.getFPGATimestamp() - methodStartTime) > _indexFaultTimeSec)) {
 				rightMasterMtr.set(ControlMode.MotionMagic, 0); 
 				leftMasterMtr.set(ControlMode.MotionMagic, 0);
 				isSRXMoveActive = false;

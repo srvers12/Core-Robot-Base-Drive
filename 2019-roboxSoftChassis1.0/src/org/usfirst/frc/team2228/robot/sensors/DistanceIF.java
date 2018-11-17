@@ -33,5 +33,8 @@ public class DistanceIF {
 	public void getAngleCorrection(){
 		// returns PID correction 
 	}
+	public boolean collisionDetected(){
+		return false;
+	}
 }
 	

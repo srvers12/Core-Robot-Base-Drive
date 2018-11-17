@@ -23,7 +23,7 @@ public class DriverIF {
 		return xboxIF.RIGHT_JOYSTICK_Y();
 	}
 	public boolean ShiftSidewaysBtn() {
-		return xboxIF.LEFT_TRIGGER() {;
+		return xboxIF.LEFT_TRIGGER();
 	}
 	
 }

@@ -1119,6 +1119,8 @@ public class SRXDriveBase {
 			rightMasterMtr.configMotionProfileTrajectoryPeriod(SRXDriveBaseCfg.kBaseTrajPeriodMs, SRXTimeoutValueMs);
 			leftMasterMtr.configMotionProfileTrajectoryPeriod(SRXDriveBaseCfg.kBaseTrajPeriodMs, SRXTimeoutValueMs);
 
+			rightMasterMtr.setStatusFramePeriod(StatusFrameEnhanced.Status_10_MotionMagic, 10, SRXTimeoutValueMs);
+
 			// set profile slot point.profileSlotSelect0 = 0;
 			
 			//  Lets create a periodic task to funnel our trajectory points into our talon.

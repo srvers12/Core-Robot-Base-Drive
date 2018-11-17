@@ -3,6 +3,10 @@ package org.usfirst.frc.team2228.robot.oi;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
 
 public class DriverIF {
+
+	// REVISIONS
+	// 181102 - edited to just support drive base
+	
 	XboxIF xboxIF;
 	// Constructor
 	public DriverIF() {

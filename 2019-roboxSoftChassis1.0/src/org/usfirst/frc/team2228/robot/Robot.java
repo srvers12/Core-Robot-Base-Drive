@@ -1,18 +1,14 @@
 package org.usfirst.frc.team2228.robot;
 
 
+
+import org.usfirst.frc.team2228.robot.oi.DriveBaseTeleopControl;
+import org.usfirst.frc.team2228.oi.DriverIF;
+import org.usfirst.frc.team2228.robot.test.SRXDriveBaseTest;
 import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBase;
-import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBaseCfg;
-import org.usfirst.frc.team2228.robot.subsystems.drvbase.DriveBaseTeleopControl;
-import org.usfirst.frc.team2228.robot.driver.DriverIF;
-import org.usfirst.frc.team2228.robot.test.Test_SRXDriveBase;
 
 
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.IterativeRobot;
-import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.command.Scheduler;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
@@ -23,34 +19,28 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * directory.
  */
 public class Robot extends IterativeRobot {
-	private String input = "";
-	final String defaultAuto = "Default";
-	final String customAuto = "My Auto";
-	String autoSelected;
-	SendableChooser<String> chooser = new SendableChooser<>();
 	
 	// define object instances
-	private SRXDriveBase base;
-	private TestSRXDriveBase testSRXDriveBase;
+	private SRXDriveBase driveBase;
+	private SRXDriveBaseTest testSRXDriveBase;
 	private DriverIF driverIF;
-	private TeleopController telopDriver;
+	private DriveBaseTeleopControl driveBaseTelop;
 	
-	/**
-	 * This function is run when the robot is first started up and should be
-	 * used for any initialization code.
-	 */
+	private boolean isConsoleDataEnabled = false;
+	private String lastMsgString = " ";
+
 	
+	// This function is run when the robot is first started up and should be
+	// used for any initialization code.
 	@Override
 	public void robotInit() {
+
+		// Create object instances
 		driverIF = new DriverIF();
-		base = new SRXDriveBase();
-		cube = new CubeManipulator(driverIF);
-		telopDriver = new TeleopController(driverIF, base);
-		
-		// Set up automonous chooser
-		chooser.addDefault("Default Auto", defaultAuto);
-		chooser.addObject("My Auto", customAuto);
-		SmartDashboard.putData("Auto choices", chooser);
+		driveBase = new SRXDriveBase();
+		driveBaseTelop = new DriveBaseTeleopControl(driverIF, driveBase);
+		testSRXDriveBase = new SRXDriveBaseTest;
+
 	}
 
 	
@@ -58,47 +48,52 @@ public class Robot extends IterativeRobot {
 	public void autonomousInit() {
 
 		// init drive base
-		base.setSRXDriveBaseInit();
+		driveBase.Init();
 	}
 
-	/**
-	 * This function is called periodically during autonomous
-	 */
+	
+	// This function is called periodically during autonomous
 	@Override
 	public void autonomousPeriodic() {
 		
 	}
 
+	@Override
 	public void teleopInit() {
 		System.out.println("teleopInit() fi!");
-		base.setSRXDriveBaseInit();
-		//telopDriver.teleopInit();
+		driveBase.Init();
+		driveBaseTelop.Init();
 		System.out.println("Teleop Init done");
 	}
-	/**
-	 * This function is called periodically during operator control
-	 */
+	
+	// This function is called periodically during operator control
 	@Override
 	public void teleopPeriodic() {
-		telopDriver.teleopPeriodic();
+		driveBaseTelop.Periodic();
 		
 	}
 	
-	/**
-	 * This function is called once during test mode
-	 */
+	
+	// This function is called once during test mode
 	@Override
 	public void testInit() {
-		base.setSRXDriveBaseInit();
+		testSRXDriveBase.init();
 	}
 	
-	/**
-	 * This function is called periodically during test mode
-	 */
+	
+	// This function is called periodically during test mode
 	@Override
 	public void testPeriodic() {
-		base.testMethodSelection();
+		testSRXDriveBase.testMethodSelection();
 	}
-				
+	
+	private void msg(String _msgString){
+		if (isConsoleDataEnabled){
+			if (_msgString != lastMsgString){
+				System.out.println(_msgString);
+				lastMsgString = _msgString;
+			}
+		}
+	}			
 }
 

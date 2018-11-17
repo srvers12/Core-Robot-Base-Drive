@@ -15,7 +15,7 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 // ===================================
 // SET COMMANDS
 // ===================================
-// public void setSRXDriveBaseInit()
+// public void Init()
 
 // public void setEnableConsoleData(boolean _consoleData)
 // public void setMecanumShiftEnable(boolean _mecanumShiftState)
@@ -427,7 +427,7 @@ public class SRXDriveBase {
 	public void setMecanumShiftEnable(boolean _mecanumShiftState){
 		isMecanumShiftEnabled = _mecanumShiftState;
 	}
-	public void setSRXDriveBaseInit() {
+	public void Init() {
 		// Clear SRXDriveBase program control flags
 		setInitialStateForSRXDrvBasePrgFlgs();
 		

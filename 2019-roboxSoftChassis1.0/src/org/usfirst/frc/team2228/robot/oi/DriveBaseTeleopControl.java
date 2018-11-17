@@ -1,5 +1,7 @@
 package org.usfirst.frc.team2228.robot.oi;
 
+import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBase;
+
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 // 
 public class DriveBaseTeleopControl {
@@ -12,8 +14,8 @@ public class DriveBaseTeleopControl {
 	// ===============================
 	// SET COMMANDS
 	// Input:
-	// public void setDriveBaseTeleopInit()
-	// public void setDriveBaseTeleopPeriodic() 
+	// public void Init()
+	// public void Periodic() 
 	// public void setMaxThrottlePower(double _kMaxThrottlePowerLimitLevel)
 
 	// Output:
@@ -70,7 +72,6 @@ public class DriveBaseTeleopControl {
 	private static double kMaxTurnAxisAngle = 85;
 
 	// determination of max throttleAxis delta values are determined by testing
-	//private static double kMaxDeltaVelocity = 0.001;
 	private static double kThrotleMaxDeltaChange = 0.1;
 
 	private static double kMaxThrottlePowerLimit = .95;
@@ -111,14 +112,14 @@ public class DriveBaseTeleopControl {
 	
 	//==========================================
 	// TELEOP INIT
-	public void setDriveBaseTeleopInit(){
+	public void Init(){
 		loadSmartDashBoardParmeters();
 		isWheelTurnActive = false; 
 	}
 		
 	//==========================================
 	// TELEOP PERIODIC
-	public void setDriveBaseTeleopPeriodic() {
+	public void Periodic() {
 		
 		// Flag for console display
 		isTeleopConsoleDataEnabled = SmartDashboard.getBoolean("TstBtn-EnableTeleopConsoleDisplay:", isTeleopConsoleDataEnabled);
@@ -155,19 +156,24 @@ public class DriveBaseTeleopControl {
 			if((Math.abs(wheelAxis) > wheelAxisTrunOnStpt) && (Math.abs(turnAxis) < wheelAxisTurnOffStpt)){
 				isWheelTurnActive = true;
 				signWheelAxis = Math.signum(wheelAxis);
-			}
+			} else {
 			turnAxis = applyTurnProfileFilter(turnAxis);
 			turnAxis = cap(turnAxis);
 
 			// Limit turn power with respect to throttle power
 			turnAxis *= kMaxTurnPowerLimit * (1 - (throttleAxis * throttleAxis));
+			}
 		} else{ 
 			if((Math.abs(wheelAxis) < wheelAxisTurnOffStpt) && (Math.abs(turnAxis) < wheelAxisTurnOffStpt)){
 				isWheelTurnActive = false;
 			}
-			// Find the gameController joystick angle of x,y and divide by 90 to map value to (-1 to 1)
+			// Find the gameController joystick angle of x,y
 			turnAxisAngle = Math.toDegrees((double)Math.atan2(turnAxis,Math.abs(wheelAxis)));
+
+			// Limit wheel magnitude
 			turnAxisAngle = (turnAxisAngle > kMaxTurnAxisAngle)? kMaxTurnAxisAngle: turnAxisAngle;
+
+			// map angle to (-1 to 1)
 			turnAxis = turnAxisAngle / 90;
 
 			// Limit turn power with respect to throttle power

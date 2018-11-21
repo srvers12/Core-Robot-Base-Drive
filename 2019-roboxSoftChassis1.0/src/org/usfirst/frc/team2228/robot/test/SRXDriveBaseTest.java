@@ -5,7 +5,11 @@ import edu.wpi.first.wpilibj.SRXDriveBaseCfg;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-public class Test_SRXDriveBase {
+import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBase;
+import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBaseCfg;
+
+
+public class SRXDriveBaseTest {
 
     private SRXDriveBase drivebase; 
 
@@ -24,30 +28,30 @@ public class Test_SRXDriveBase {
 
     // =====================
     // Constructor
-    public Test_SRXDriveBase(SRXDriveBase DriveBase){
+    public SRXDriveBaseTest(SRXDriveBase DriveBase){
 
     }
 
-    public void testInit(){
+    public void init(){
 
 		isTestBtnActive = false;
 		isMtrTestBtnActive = false;
 		isTestStepFunctionActive = false;
 		isTestMoveForStraightCalActive = false;
-        isTestMethodSelectionActive = false;
-        
+		isTestMethodSelectionActive = false;
+		
+        // Drivebase setup methods
         SmartDashboard.putBoolean("TstBtn-StepFnc:", false);
 		SmartDashboard.putBoolean("TstBtn-DrvStraightCal:", false);
 		SmartDashboard.putBoolean("TstBtn-DrvStrghtAutoCal:", false);
-		SmartDashboard.putBoolean("TstBtn-VelMoveToPos:", false);
+		SmartDashboard.putBoolean("TstBtn-MotorEncoderTest:", false);
+
+		// DriveBase autonomous motion methods
+		SmartDashboard.putBoolean("TstBtn-MoveToPos:", false);
 		SmartDashboard.putBoolean("TstBtn-RotateToAngle:", false);
 		SmartDashboard.putBoolean("TstBtn-TurnToAngle:", false);
-		SmartDashboard.putBoolean("TstBtn-CascadeTest:", false);
-		SmartDashboard.putBoolean("TstBtn-MotorEncoderTest:", false);
-		SmartDashboard.putBoolean("TstBtn-TimeVelMove:", false);
-		SmartDashboard.putBoolean("TstBtn-TimeRotate:", false);
-		SmartDashboard.putBoolean("TstBtn-TimeTurn:", false);
-		SmartDashboard.putBoolean("TstBtn-MagicMotion:", false);
+		SmartDashboard.putBoolean("TstBtn-ProfileMove:", false);
+
 		SmartDashboard.putBoolean("TstBtn-EnableSRXDriveBaseConsoleDisplay:", isConsoleDataEnabled);
 
     }

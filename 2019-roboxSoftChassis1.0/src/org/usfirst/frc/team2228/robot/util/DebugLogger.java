@@ -219,19 +219,19 @@ public class DebugLogger {
 		}
 	}
 		
-		public static synchronized void closecsv() {
-			try {
-				is_loggingcsv = false;
-				if(opencsv != null){
-					if(fhC != null) {
-						fhC.close();
-						fhC = null;
-					}
-					opencsv = null;
+	public static synchronized void closecsv() {
+		try {
+			is_loggingcsv = false;
+			if(opencsv != null){
+				if(fhC != null) {
+					fhC.close();
+					fhC = null;
 				}
-			} catch (Exception e) {
-				e.printStackTrace(System.out);
+				opencsv = null;
 			}
+		} catch (Exception e) {
+			e.printStackTrace(System.out);
+		}
 		
 	}
 }

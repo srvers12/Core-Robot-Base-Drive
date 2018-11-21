@@ -1,11 +1,13 @@
 package org.usfirst.frc.team2228.robot;
 
 
-import org.usfirst.frc.team2228.robot.sensors.AngleIF;
 import org.usfirst.frc.team2228.robot.oi.DriveBaseTeleopControl;
 import org.usfirst.frc.team2228.robot.oi.DriverIF;
-import org.usfirst.frc.team2228.robot.test.SRXDriveBaseTest;
+import org.usfirst.frc.team2228.robot.sensors.AngleIF;
 import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBase;
+import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBaseCfg;
+import org.usfirst.frc.team2228.robot.test.SRXDriveBaseTest;
+import org.usfirst.frc.team2228.robot.util.DebugLogger;
 
 
 import edu.wpi.first.wpilibj.IterativeRobot;
@@ -22,11 +24,13 @@ public class Robot extends IterativeRobot {
 	
 	// define object instances
 	private SRXDriveBase driveBase;
-	private SRXDriveBaseTest testSRXDriveBase;
+	private SRXDriveBaseTest testDriveBase;
 	private DriverIF driverIF;
 	private AngleIF angleIF;
 	private DriveBaseTeleopControl driveBaseTelop;
-	
+	private SRXDriveBaseCfg driveBaseCfg;
+	private DebugLogger logger;
+
 	private boolean isConsoleDataEnabled = false;
 	private String lastMsgString = " ";
 
@@ -38,11 +42,12 @@ public class Robot extends IterativeRobot {
 
 		// Create object instances
 		driverIF = new DriverIF();
-		angelIF = new AngleIF();
+		angleIF = new AngleIF();
 		driveBase = new SRXDriveBase();
+		driveBaseCfg = new SRXDriveBaseCfg();
 		driveBaseTelop = new DriveBaseTeleopControl(driverIF, driveBase);
-		testSRXDriveBase = new SRXDriveBaseTest;
-
+		testDriveBase = new SRXDriveBaseTest(driveBase);
+		logger = new DebugLogger();
 	}
 
 	
@@ -50,7 +55,7 @@ public class Robot extends IterativeRobot {
 	public void autonomousInit() {
 
 		// init drive base
-		driveBase.Init();
+		driveBase.init();
 	}
 
 	
@@ -62,10 +67,8 @@ public class Robot extends IterativeRobot {
 
 	@Override
 	public void teleopInit() {
-		System.out.println("teleopInit() fi!");
-		driveBase.Init();
-		driveBaseTelop.Init();
-		System.out.println("Teleop Init done");
+		driveBase.init();
+		driveBaseTelop.init();
 	}
 	
 	// This function is called periodically during operator control
@@ -79,14 +82,14 @@ public class Robot extends IterativeRobot {
 	// This function is called once during test mode
 	@Override
 	public void testInit() {
-		testSRXDriveBase.init();
+		testDriveBase.init();
 	}
 	
 	
 	// This function is called periodically during test mode
 	@Override
 	public void testPeriodic() {
-		testSRXDriveBase.testMethodSelection();
+		testDriveBase.testMethodSelection();
 	}
 	
 	private void msg(String _msgString){

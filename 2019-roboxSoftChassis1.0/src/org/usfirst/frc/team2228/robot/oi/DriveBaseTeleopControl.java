@@ -112,7 +112,7 @@ public class DriveBaseTeleopControl {
 	
 	//==========================================
 	// TELEOP INIT
-	public void Init(){
+	public void init(){
 		loadSmartDashBoardParmeters();
 		isWheelTurnActive = false; 
 	}

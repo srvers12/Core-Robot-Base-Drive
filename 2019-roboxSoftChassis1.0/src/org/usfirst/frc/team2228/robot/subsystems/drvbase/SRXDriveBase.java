@@ -74,33 +74,25 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 //	AUTONOMOUS MOTION COMMANDS
 // =====================================
 
-// *******
+// ++++++++++
 // public boolean move(double _MoveDistanceIn, 
 //					   double _MovePwrlevel)
-// *******
+// 
 // @parm  _MoveDistanceIn - move distance in inches
 // @parm  _MovePwrlevel - power level 0 - 1, 
 //						  program converts to VelocityNativeUnits as (0 to 1)* maxVelocityNativeUnits
 
-// *******
+// ++++++++++
 // public boolean move(double _MoveDistanceIn, 
 //					   double _MovePwrLevel,
-//					   boolean _MoveSideways)
-// *******
+// +++++++++
 //
-// *******
+// +++++++++
 // public boolean rotate(double _RotateAngleDeg, 
 //						 double _RotatePwrLevel)
-// *******
+// +++++++++
 //
-// *******
-// public boolean turn(double   _TurnAngleDeg, 
-//					   double   _TurnRadiusIn, 
-//					   double   _TurnPowerLevel, 
-//					   boolean  _isRobotDirectionRev)
-// *******
-//
-// ******
+// +++++++++
 // public boolean SRXmove(int    _rightCruiseVel, 
 //					   int    _rightAccel, 
 //					   double _rightDistance, 
@@ -109,16 +101,13 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 //					   double _leftDistance,
 //					   double _indexFaultTimeSec)
 // distanceIF.collisionDetected
-// ******
-
-
-
-
+// +++++++++
 //
+// ++++++++
 // public boolean SRXProfileMove(double[][] ProfileRight, 
 //								 double[][] ProfileLeft, 
 //								 int totalPointNum)
-// ******
+// ++++++++
 
 
 // ===================================
@@ -867,132 +856,7 @@ public class SRXDriveBase {
 		return isStdTrapezoidalRotateActive;
 	}
 	
-	//===================================
-	// TURN TO ANGLE
-	//===================================
 
-	public boolean turn(double  _TurnAngleDeg, 
-						double  _TurnRadiusIn, 
-						double  _TurnPowerLevel, 
-						boolean _isRobotDirectionRev) {
-		
-		if (!isTrapezoidalTurnToAngleActive) {
-			isTrapezoidalTurnToAngleActive = true;
-			methodStartTime = Timer.getFPGATimestamp();
-			msg("MAGIC MOVE TURN TO ANGLE ACTIVE===========================");
-			
-			// Check turn radius add 4 inches if less than 1/2 wheelbase
-			wheelToCenterDistanceIn = (SRXDriveBaseCfg.kTrackWidthIn / 2);
-			if(_TurnRadiusIn < wheelToCenterDistanceIn){
-				_TurnRadiusIn = wheelToCenterDistanceIn + MinimumRadiusDistanceAddition;
-			}
-
-			//?if (_isRobotDirectionRev): RobotDirectionSign = 1, RobotDirectionSign = -1;
-
-			// Determine which wheel has to speed up to turn
-			// Turn right
-			if (_turnAngleDeg > 0) {
-				if(_isRobotDirectionRev){
-					RightCruiseVelNativeUnits = (-SRXDriveBaseCfg.MaxVel_VelNativeUnits * _TurnPowerLevel)
-													* (1 + (SRXDriveBaseCfg.kTrackWidthIn / (2 * _TurnRadiusIn)));
-					RightTurnMoveTimeSec = (int)(1.5 * (RightDistanceCnts / RightCruiseVelNativeUnits));
-					RightAccelNativeUnits = (int)(RightCruiseVelNativeUnits/(RightTurnMoveTimeSec/kStdAccelTimeSegment));
-
-					LeftCruiseVelNativeUnits = (-SRXDriveBaseCfg.MaxVel_VelNativeUnits * _TurnPowerLevel)	
-												* (1 - (SRXDriveBaseCfg.kTrackWidthIn / (2 * _TurnRadiusIn)));
-					LeftTurnMoveTimeSec = (int)(1.5 * (LeftDistanceCnts / LeftCruiseVelNativeUnits));
-					LeftAccelNativeUnits = (int)(LeftCruiseVelNativeUnits/(LeftTurnMoveTimeSec/kStdAccelTimeSegment));
-				} else {
-					RightCruiseVelNativeUnits = (SRXDriveBaseCfg.MaxVel_VelNativeUnits * _TurnPowerLevel) 
-										* (1 - (SRXDriveBaseCfg.kTrackWidthIn / (2 * _TurnRadiusIn)));
-					LeftCruiseVelNativeUnits = (SRXDriveBaseCfg.MaxVel_VelNativeUnits * _TurnPowerLevel) 
-										* (1 + (SRXDriveBaseCfg.kTrackWidthIn / (2 * _TurnRadiusIn)));
-				}
-				
-			// Turn Left
-			} else {
-				if(_isRobotDirectionRev){
-					
-					LeftCruiseVelNativeUnits = (-SRXDriveBaseCfg.MaxVel_VelNativeUnits * _TurnPowerLevel)
-										* (1 + (SRXDriveBaseCfg.kTrackWidthIn / (2 * _TurnRadiusIn)));
-				} else {
-					RightCruiseVelNativeUnits = (SRXDriveBaseCfg.MaxVel_VelNativeUnits * _TurnPowerLevel) 
-										* (1 + (SRXDriveBaseCfg.kTrackWidthIn / (2 * _TurnRadiusIn)));					
-					LeftCruiseVelNativeUnits = (SRXDriveBaseCfg.MaxVel_VelNativeUnits * _TurnPowerLevel) 
-										* (1 - (SRXDriveBaseCfg.kTrackWidthIn / (2 * _TurnRadiusIn)));
-				}
-				
-			}
-			
-			// Calculations
-			
-			
-			// Convert turn distance in inches to encoder counts(2*PI*Radius)*(turnAngledeg/360deg)*(cnts/in)
-			// Turn right
-			if (_turnAngleDeg >= 0) {
-				if(_isRobotDirectionRev){
-					outerDistanceStopCnt = (2 * Math.PI * ((_TurnRadiusIn + wheelToCenterDistanceIn) 
-											* (Math.abs(_turnAngleDeg) / 360)) * SRXDriveBaseCfg.kRightEncoderCountsPerIn);
-				} else {
-					outerDistanceStopCnt = (2 * Math.PI * ((_TurnRadiusIn + wheelToCenterDistanceIn) 
-											* (Math.abs(_turnAngleDeg) / 360)) * SRXDriveBaseCfg.kLeftEncoderCountsPerIn);
-				}
-			// Turn Left	
-			} else {
-				if(_isRobotDirectionRev){
-					outerDistanceStopCnt = (2 * Math.PI * ((_TurnRadiusIn + wheelToCenterDistanceIn) 
-											* (Math.abs(_turnAngleDeg) / 360)) * SRXDriveBaseCfg.kLeftEncoderCountsPerIn);
-				} else {
-					outerDistanceStopCnt = (2 * Math.PI * ((_TurnRadiusIn + wheelToCenterDistanceIn) 
-											* (Math.abs(_turnAngleDeg) / 360)) * SRXDriveBaseCfg.kRightEncoderCountsPerIn);
-				}
-				
-			}
-			
-			if (isConsoleDataEnabled){
-				System.out.printf("RgtD:%-8.2f ++RgtV:%-8d ++RgtA:%-8d ++LftD:%-8.2f ++LftV:%-8d ++LftA:%-8d%n", 
-						RightDistanceCnts, 
-						RightCruiseVelNativeUnits,
-						RightAccelNativeUnits,
-						LeftDistanceCnts,
-						LeftCruiseVelNativeUnits,
-						LeftAccelNativeUnits);
-			}
-		// Active state -  check for end of encoder count
-		} else if(!SRXMove(RightCruiseVelNativeUnits, 
-								RightAccelNativeUnits, 
-								RightDistanceCnts, 
-								LeftCruiseVelNativeUnits,	
-								LeftAccelNativeUnits, 
-								LeftDistanceCnts)) { 
-			
-					
-					if (!delay(1)) {
-						isTrapezoidalTurnToAngleActive = false;
-						RightCruiseVel = 0;
-						LeftCruiseVel = 0;
-						methodTime = Timer.getFPGATimestamp() - methodStartTime;
-						msg("Motion magic Turn to angle Time(Sec) = " + methodTime);
-						msg("MOTION MAGIC TURN TO ANGLE DONE===========================");
-					}
-				}
-				
-		
-		
-		//! not right: SetDriveTrainCmdLevel(mgmvRightCruiseVel, mgmvLeftCruiseVel);
-		
-		// +++++++++++++++++++++++++++++++++++++++
-		// Display data
-		if (isConsoleDataEnabled){
-			System.out.printf("RgtCmd: %-4.3f ===LftCmd: %-4.3f ===StopCnt: %-8.0f ===LftPos: %-8.2f ===RgtPos: %-8.2f%n",
-									RightCruiseVel,
-									LeftCruiseVel,
-									outerDistanceStopCnt,
-									leftSensorPositionRead, 
-									rightSensorPositionRead);
-		}
-		return isTrapezoidalTurnToAngleActive;
-	}
 	
 	// This method performs a SRX magic motion command from user calculated values
 	// All SRXBaseMove parms are in native units 
@@ -1317,10 +1181,10 @@ public class SRXDriveBase {
 			// This will then be loaded into the SRX buffer via API
 			for (int i = _profileIndexPtr; i < _profileLoadCnt; ++i) {
 				trajectoryPointRight.position = pointsRight[i][0];
-				trajectoryPointLeft.position = pointsRight[i][0];
+				trajectoryPointLeft.position = pointsLeft[i][0];
 
 				trajectoryPointRight.velocity = pointsRight[i][1];
-				trajectoryPointLeftt.velocity = pointsRight[i][1];
+				trajectoryPointLeftt.velocity = pointsLeft[i][1];
 
 				trajectoryPointRight.headingDeg = 0; // future feature - not used in this example
 				trajectoryPointLeft.headingDeg = 0; // future feature - not used in this example

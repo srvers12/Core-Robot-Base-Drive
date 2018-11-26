@@ -116,6 +116,7 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 //Carrying over the classes from other libraries
 import org.usfirst.frc.team2228.robot.sensors.AngleIF;
 import org.usfirst.frc.team2228.robot.sensors.DistanceIF;
+import org.usfirst.frc.team2228.robot.util.DebugLogger;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
@@ -146,6 +147,7 @@ public class SRXDriveBase {
 	private WPI_TalonSRX rightFollowerMtr;
 	private WPI_TalonSRX leftMasterMtr;
 	private WPI_TalonSRX leftFollowerMtr;
+	private DebugLogger log;
 	private AngleIF angleIF;
 	private DistanceIF distanceIF;
 	
@@ -249,8 +251,9 @@ public class SRXDriveBase {
 	private String logString = " ";
 	
 	// SRXDriveBase Class Constructor
-	public SRXDriveBase() {
+	public SRXDriveBase(DebugLogger _logger) {
 	
+		log = _logger;
 		
 		// Create CAN SRX motor controller objects
 		rightMasterMtr = new TalonSRX(RobotMap.RIGHT_MSTR_MTR_CAN_ID);
@@ -258,8 +261,9 @@ public class SRXDriveBase {
 		leftMasterMtr = new TalonSRX(RobotMap.LEFT_MSTR_MTR_CAN_ID);
 		leftFollowerMtr = new TalonSRX(RobotMap.LEFT_FOLLOWER_MTR_CAN_ID);
 
-		angleIF = new AngleIF();
-		distanceIF = new DistanceIF();
+		
+
+		
 
 		// RIGHT MOTORS===========================================
 		// =======================================================
@@ -423,7 +427,7 @@ public class SRXDriveBase {
 		isConsoleDataEnabled = _consoleData;
 	}
 
-	public void setMecanumShiftEnable(boolean _mecanumShiftState){
+	public void setMecanumShiftSidewaysEnable(boolean _mecanumShiftState){
 		isMecanumShiftEnabled = _mecanumShiftState;
 	}
 	public void init() {

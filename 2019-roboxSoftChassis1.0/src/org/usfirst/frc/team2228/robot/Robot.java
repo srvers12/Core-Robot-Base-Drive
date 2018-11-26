@@ -27,7 +27,7 @@ public class Robot extends IterativeRobot {
 	private SRXDriveBaseTest testDriveBase;
 	private DriverIF driverIF;
 	private AngleIF angleIF;
-	private DriveBaseTeleopControl driveBaseTelop;
+	private DriveBaseTeleopControl driveBaseTelopControl;
 	private SRXDriveBaseCfg driveBaseCfg;
 	private DebugLogger logger;
 
@@ -35,19 +35,28 @@ public class Robot extends IterativeRobot {
 	private String lastMsgString = " ";
 
 	
-	// This function is run when the robot is first started up and should be
-	// used for any initialization code.
+	// This function is run when the robot is first started up: 
+	// 1) create object instances
 	@Override
 	public void robotInit() {
 
 		// Create object instances
+		logger = new DebugLogger();
 		driverIF = new DriverIF();
 		angleIF = new AngleIF();
-		driveBase = new SRXDriveBase();
+		driveBase = new SRXDriveBase(logger);
 		driveBaseCfg = new SRXDriveBaseCfg();
-		driveBaseTelop = new DriveBaseTeleopControl(driverIF, driveBase);
-		testDriveBase = new SRXDriveBaseTest(driveBase);
-		logger = new DebugLogger();
+
+		driveBaseTelopControl = new DriveBaseTeleopControl(driverIF, driveBase, logger);
+		testDriveBase = new SRXDriveBaseTest(driveBase, driveBaseCfg, logger);
+
+		// open program log and a data log
+		log.closecsvFile();
+		log.closelog();
+
+		log.fopenlog("/home/lvuser/log/");
+		log.opencsvFile("/home/lvuser/log/");
+		
 	}
 
 	
@@ -68,13 +77,14 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void teleopInit() {
 		driveBase.init();
-		driveBaseTelop.init();
+		driveBaseTelopControl.init();
+
 	}
 	
 	// This function is called periodically during operator control
 	@Override
 	public void teleopPeriodic() {
-		driveBaseTelop.Periodic();
+		driveBaseTelopControl.Periodic();
 		
 	}
 	

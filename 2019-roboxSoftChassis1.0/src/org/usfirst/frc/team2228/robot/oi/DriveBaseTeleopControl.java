@@ -1,6 +1,7 @@
 package org.usfirst.frc.team2228.robot.oi;
 
 import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBase;
+import org.usfirst.frc.team2228.robot.util.DebugLogger;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 // 
@@ -13,26 +14,20 @@ public class DriveBaseTeleopControl {
 	
 	// ===============================
 	// SET COMMANDS
-	// Input:
 	// public void Init()
 	// public void Periodic() 
 	// public void setMaxThrottlePower(double _kMaxThrottlePowerLimitLevel)
-
-	// Output:
-	// driveBase.setMecanumShiftSidewasysEnable(true/false)
-	// driveBase.setThrottleTurn(throttleAxis, turnAxis)
-
 	// ===============================
-	// GET COMMANDS
-	// DriverIF.getMecanumShiftSidewasysBtn()
-	// DriverIF.getThrottleAxis()
-	// DriverIF.getTurnAxis()
-	// DriverIF.getWheelAxis()
-
+	// OBJECT SET/GET COMMANDS
+	// driveBase.setThrottleTurn(throttleAxis, turnAxis)
+	// driveBase.setMecanumShiftSidewasysEnable(true/false)
+	// driverIF.getMecanumShiftSidewasysBtn()
+	// driverIF.getThrottleAxis()
+	// driverIF.getTurnAxis()
+	// driverIF.getWheelAxis()
 	//================================
-	//MEHTODS
-
-	// private void setSmartDashBoardParmeters()
+	// OBJECT MEHTODS
+	// private void   setSmartDashBoardParmeters()
 	// private double applyTurnProfileFilter(double _turnAxis)
 	// private double applySineFunction(double fTurn)
 	// private double applyThrottleProfileFilter(double _throttleAxis)
@@ -40,14 +35,15 @@ public class DriveBaseTeleopControl {
 	// private double cap(double num)
 	// private double conditionAxisSignal(double num)
 	// private double ApplyJoyDeadBand(double num)
-	// private void msg(String _msgString)
+	// private void   msg(String _msgString)
 
 	//================================
 	// OBJECTS
 	
-	private DriverIF DriverIF;
+	private DriverIF driverIF;
 	private SRXDriveBase driveBase;
-	
+	private DebugLogger log;
+
 	//================================
 	// CONFIGURATION SWITCHES
 	
@@ -105,9 +101,12 @@ public class DriveBaseTeleopControl {
 	
 	//==============================================
 	// TELEOPCONTROLLER CONSTRUCTOR
-	public DriveBaseTeleopControl(DriverIF _driverIF, SRXDriveBase _driveBase) {
-		DriverIF = _driverIF;
+	public DriveBaseTeleopControl(DriverIF     _driverIF, 
+								  SRXDriveBase _driveBase,
+								  DebugLogger  _debuglogger) {
+		driverIF = _driverIF;
 		driveBase = _driveBase;
+		log = _debuglogger;
 	}
 	
 	//==========================================
@@ -129,9 +128,9 @@ public class DriveBaseTeleopControl {
 		
 		// Save the joystick values
 		
-		origThrottleAxis = isThrotleReversed? -DriverIF.getThrottleAxis(): DriverIF.getThrottleAxis();
-		origTurnAxis = DriverIF.getTurnAxis();
-		origWheelAxis = DriverIF.getWheelAxis();
+		origThrottleAxis = isThrotleReversed? -driverIF.getThrottleAxis(): driverIF.getThrottleAxis();
+		origTurnAxis = driverIF.getTurnAxis();
+		origWheelAxis = driverIF.getWheelAxis();
 
 		throttleAxis = origThrottleAxis;
 		turnAxis = origTurnAxis;
@@ -184,7 +183,7 @@ public class DriveBaseTeleopControl {
 		// DRIVE ROBOT
 		
 		if(!isTestJoyStickEnabled){
-			if(DriverIF.getMecanumShiftSidewaysBtn()){
+			if(driverIF.getMecanumShiftSidewaysBtn()){
 				driveBase.setMecanumShiftSidewaysEnable(true);
 				driveBase.setThrottleTurn(turnAxis, 0);
 			} else {
@@ -222,7 +221,6 @@ public class DriveBaseTeleopControl {
 
 	private double applyTurnProfileFilter(double _turnAxis) {
 		
-		double fThrottle = _throttleAxis;
 		double fTurn = _turnAxis;
 		
 		//developed by team 254 for the turnAxis stick to provide a more realistic feel for turnAxising???
@@ -237,7 +235,7 @@ public class DriveBaseTeleopControl {
 	private double applySineFunction(double fTurn) {
 		// kTurnProfileGain should be 0.1 to 1.0 (.1-linear response; 1-high response at low turnaxis input)
 		double factor = (Math.PI / 2.0) * kTurnProfileGain;
-		return Math.sin(factor * _turnAxis) / Math.sin(factor);
+		return Math.sin(factor * fTurn) / Math.sin(factor);
 	}
 	
 	private double applyThrottleProfileFilter(double _throttleAxis) {
@@ -258,7 +256,7 @@ public class DriveBaseTeleopControl {
 		// Determine throtle delta from last avg
 		throttleChange = _accelFilterThrottleValue - ((throttleNminus1 + throttleNminus2) / 2);
 		// Cap throtle change
-		throttleChange = (math.abs(throttleChange) > kThrotleMaxDeltaChange)? kThrotleMaxDeltaChange : throttleChange;
+		throttleChange = (Math.abs(throttleChange) > kThrotleMaxDeltaChange)? kThrotleMaxDeltaChange : throttleChange;
 
 		_accelFilterThrottleValue += signThrottleValue * throttleChange;
 

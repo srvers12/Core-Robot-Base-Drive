@@ -88,7 +88,7 @@ public class DebugLogger {
 		}
 	}
 	
-	public static synchronized void fopencsv(String filePath) {
+	public static synchronized void opencsvFile(String filePath) {
 		if (!is_loggingcsv) {
 			try {
 				opencsv = Logger.getLogger("DataLog");
@@ -219,7 +219,7 @@ public class DebugLogger {
 		}
 	}
 		
-	public static synchronized void closecsv() {
+	public static synchronized void closecsvFile() {
 		try {
 			is_loggingcsv = false;
 			if(opencsv != null){

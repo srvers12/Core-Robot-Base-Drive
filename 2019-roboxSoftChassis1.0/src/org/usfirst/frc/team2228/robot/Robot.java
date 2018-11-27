@@ -30,6 +30,7 @@ public class Robot extends IterativeRobot {
 	private DriveBaseTeleopControl driveBaseTelopControl;
 	private SRXDriveBaseCfg driveBaseCfg;
 	private DebugLogger logger;
+	private RobotMap robotMap;
 
 	private boolean isConsoleDataEnabled = false;
 	private String lastMsgString = " ";
@@ -44,7 +45,9 @@ public class Robot extends IterativeRobot {
 		logger = new DebugLogger();
 		driverIF = new DriverIF();
 		angleIF = new AngleIF();
-		driveBase = new SRXDriveBase(logger);
+		robotMap = new RobotMap();
+		
+		driveBase = new SRXDriveBase(robotMap, logger);
 		driveBaseCfg = new SRXDriveBaseCfg();
 
 		driveBaseTelopControl = new DriveBaseTeleopControl(driverIF, driveBase, logger);

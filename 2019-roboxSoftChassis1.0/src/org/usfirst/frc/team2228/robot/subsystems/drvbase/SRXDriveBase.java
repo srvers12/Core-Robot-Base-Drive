@@ -114,6 +114,7 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 
 
 //Carrying over the classes from other libraries
+import org.usfirst.frc.team2228.robot.RobotMap;
 import org.usfirst.frc.team2228.robot.sensors.AngleIF;
 import org.usfirst.frc.team2228.robot.sensors.DistanceIF;
 import org.usfirst.frc.team2228.robot.util.DebugLogger;
@@ -121,10 +122,12 @@ import org.usfirst.frc.team2228.robot.util.DebugLogger;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
-import com.ctre.phoenix.motorcontrol.can.*;
-import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import com.ctre.phoenix.motorcontrol.Faults;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.VelocityMeasPeriod;
+
+import com.ctre.phoenix.motorcontrol.can.*;
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 
 import com.ctre.phoenix.motion.*;
 import com.ctre.phoenix.motion.SetValueMotionProfile;
@@ -143,13 +146,16 @@ public class SRXDriveBase {
 	
 	
 	// DifferentialDrive or tank motors
-	private WPI_TalonSRX rightMasterMtr;
-	private WPI_TalonSRX rightFollowerMtr;
-	private WPI_TalonSRX leftMasterMtr;
-	private WPI_TalonSRX leftFollowerMtr;
-	private DebugLogger log;
+	private TalonSRX rightMasterMtr;
+	private TalonSRX rightFollowerMtr;
+	private TalonSRX leftMasterMtr;
+	private TalonSRX leftFollowerMtr;
+	private DebugLogger debuglogger;
 	private AngleIF angleIF;
 	private DistanceIF distanceIF;
+	private RobotMap RobotMap;
+	private Faults leftFaults;
+	private Faults rightFaults;
 	
 	
 	// ===================================
@@ -182,7 +188,6 @@ public class SRXDriveBase {
 
 	// ====================================	
 	// Variables
-	private int cycleCount = 1;
 	private int SRXTimeoutValueMs = 10;
 	private int correctionSensorType = 1;
 	private int stepFunctionStopCount = 0;
@@ -251,9 +256,10 @@ public class SRXDriveBase {
 	private String logString = " ";
 	
 	// SRXDriveBase Class Constructor
-	public SRXDriveBase(DebugLogger _logger) {
+	public SRXDriveBase(RobotMap _robotMap, DebugLogger _logger) {
 	
-		log = _logger;
+		debugLogger = _logger;
+		RobotMap = _robotMap;
 		
 		// Create CAN SRX motor controller objects
 		rightMasterMtr = new TalonSRX(RobotMap.RIGHT_MSTR_MTR_CAN_ID);
@@ -261,12 +267,14 @@ public class SRXDriveBase {
 		leftMasterMtr = new TalonSRX(RobotMap.LEFT_MSTR_MTR_CAN_ID);
 		leftFollowerMtr = new TalonSRX(RobotMap.LEFT_FOLLOWER_MTR_CAN_ID);
 
-		
+		// create cashing object
+		rightFaults = new Faults();
+		leftFaults = new Faults();
 
 		
-
-		// RIGHT MOTORS===========================================
-		// =======================================================
+		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// RIGHT MOTORS===========================================================
+		// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		
 		// Set min/max output
 		rightMasterMtr.configNominalOutputForward(0.0, SRXTimeoutValueMs);
@@ -313,8 +321,9 @@ public class SRXDriveBase {
 		rightFollowerMtr.clearStickyFaults(SRXTimeoutValueMs);
 		rightFollowerMtr.set(ControlMode.Follower, rightMasterMtr.getDeviceID());
 		
-		// LEFT MOTORS========================================
-		//====================================================
+		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		// LEFT MOTORS===============================================================================
+		// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		
 		// Set min/max output
 		leftMasterMtr.configNominalOutputForward(0.0, SRXTimeoutValueMs);
@@ -383,25 +392,21 @@ public class SRXDriveBase {
 	// ======================================================================================
 	public void setRightSensorPositionToZero() {
 		// SRX API Commands are executed every 10ms
-		// Set response back timeout for 15ms to wait up to 15ms for a response back
 		rightMasterMtr.setSelectedSensorPosition(0, SRXDriveBaseCfg.kPIDLoopIDx, 25);
 	}
 	
 	public void setLeftSensorPositionToZero() {
 		// SRX API Commands are executed every 10ms
-		// Set response back timeout for 15ms to wait up to 15ms for a response back
 		leftMasterMtr.setSelectedSensorPosition(0, SRXDriveBaseCfg.kPIDLoopIDx, 25);
 	}
 	
 	public void setRightEncPositionToZero() {
 		// SRX API Commands are executed every 10ms
-		// Set response back timeout for 15ms to wait up to 15ms for a response back
 		rightMasterMtr.getSensorCollection().setQuadraturePosition(0, 15);
 	}
 	
 	public void setLeftEncPositionToZero() {
 		// SRX API Commands are executed every 10ms
-		// Set response back timeout for 15ms to wait up to 15ms for a response back
 		leftMasterMtr.getSensorCollection().setQuadraturePosition(0, 25);
 	}
 
@@ -417,8 +422,18 @@ public class SRXDriveBase {
 		leftMasterMtr.setNeutralMode(_isBrakeEnabled ? NeutralMode.Brake : NeutralMode.Coast);
 		leftFollowerMtr.setNeutralMode(_isBrakeEnabled ? NeutralMode.Brake : NeutralMode.Coast);
 	}
-	
-	public void setStopMotors(){
+
+	public void setDriveBaseRamp(double _SecToMaxPower){
+		if(SRXDriveBaseCfg.isSRXClosedLoopEnabled){
+			rightMasterMtr.configClosedloopRamp(_SecToMaxPower, SRXTimeoutValueMs);
+			leftMasterMtr.configClosedloopRamp(_SecToMaxPower, SRXTimeoutValueMs);
+		} else {
+			rightMasterMtr.configOpenloopRamp(_SecToMaxPower, SRXTimeoutValueMs);
+			leftMasterMtr.configOpenloopRamp(_SecToMaxPower, SRXTimeoutValueMs);
+		}
+	}
+
+	public void setStopMotors() {
 		rightMasterMtr.setNeutralOutput();
 		leftMasterMtr.setNeutralOutput();
 	}
@@ -439,9 +454,16 @@ public class SRXDriveBase {
 		
 		// Stop motors and clear position counters
 		setStopMotors();
-		setDriveTrainRamp(0);
+		setDriveBaseRamp(0);
 		setRightSensorPositionToZero();
 		setLeftSensorPositionToZero();
+
+		// Turn on motor safety - if no commands to SRX in 100ms, SRX's  will shut down
+		rightMasterMtr.setSafetyEnabled(true);
+		rightFollowerMtr.setSafetyEnabled(true);
+		leftMasterMtr.setSafetyEnabled(true);
+		leftFollowerMtr.setSafetyEnabled(true);
+
 		
 		// Load drive train PID values
 		if (SRXDriveBaseCfg.isSRXClosedLoopEnabled) {
@@ -477,15 +499,7 @@ public class SRXDriveBase {
 		isSRXProfileMoveActive = false;
 	}
 	
-	public void setDriveBaseRamp(double _SecToMaxPower){
-		if(SRXDriveBaseCfg.isSRXClosedLoopEnabled){
-			rightMasterMtr.configClosedloopRamp(_SecToMaxPower, SRXTimeoutValueMs);
-			leftMasterMtr.configClosedloopRamp(_SecToMaxPower, SRXTimeoutValueMs);
-		} else {
-			rightMasterMtr.configOpenloopRamp(_SecToMaxPower, SRXTimeoutValueMs);
-			leftMasterMtr.configOpenloopRamp(_SecToMaxPower, SRXTimeoutValueMs);
-		}
-	}
+	
 	
 	// =======================================================================================
 	// =======================================================================================
@@ -717,9 +731,15 @@ public class SRXDriveBase {
 		
 		
 		if (SRXDriveBaseCfg.isSRXClosedLoopEnabled) {
-			// Output commands to SRX modules set as [% from (-1 to 1)] x MaxVel_VelNativeUnits
-			rightMasterMtr.set(ControlMode.Velocity, (rightCmdLevel * SRXDriveBaseCfg.MaxVel_VelNativeUnits ));
-			leftMasterMtr.set(ControlMode.Velocity, (leftCmdLevel * SRXDriveBaseCfg.MaxVel_VelNativeUnits ));
+			rightMasterMtr.getFaults(rightFaults);
+			leftMasterMtr.getFaults(leftFaults);
+			If (rightFaults.SensorOutOfPhase || leftFaults.SensorOutOfPhase){
+				setStopMotors();
+			} else {
+				// Output commands to SRX modules set as [% from (-1 to 1)] x MaxVel_VelNativeUnits
+				rightMasterMtr.set(ControlMode.Velocity, (rightCmdLevel * SRXDriveBaseCfg.MaxVel_VelNativeUnits ));
+				leftMasterMtr.set(ControlMode.Velocity, (leftCmdLevel * SRXDriveBaseCfg.MaxVel_VelNativeUnits ));
+			}	
 		} else {
 			rightMasterMtr.set(ControlMode.PercentOutput,rightCmdLevel);
 			leftMasterMtr.set(ControlMode.PercentOutput,leftCmdLevel);

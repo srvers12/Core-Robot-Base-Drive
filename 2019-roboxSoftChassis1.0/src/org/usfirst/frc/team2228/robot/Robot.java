@@ -1,7 +1,7 @@
 package org.usfirst.frc.team2228.robot;
 
 
-import org.usfirst.frc.team2228.robot.oi.DriveBaseTeleopControl;
+import org.usfirst.frc.team2228.robot.oi.DriveBaseTeleopMaster;
 import org.usfirst.frc.team2228.robot.oi.DriverIF;
 import org.usfirst.frc.team2228.robot.sensors.AngleIF;
 import org.usfirst.frc.team2228.robot.subsystems.drvbase.SRXDriveBase;
@@ -27,7 +27,7 @@ public class Robot extends IterativeRobot {
 	private SRXDriveBaseTest testDriveBase;
 	private DriverIF driverIF;
 	private AngleIF angleIF;
-	private DriveBaseTeleopControl driveBaseTelopControl;
+	private DriveBaseTeleopMaster driveBaseTelopMaster;
 	private SRXDriveBaseCfg driveBaseCfg;
 	private DebugLogger logger;
 	private RobotMap robotMap;
@@ -50,7 +50,7 @@ public class Robot extends IterativeRobot {
 		driveBase = new SRXDriveBase(robotMap, logger);
 		driveBaseCfg = new SRXDriveBaseCfg();
 
-		driveBaseTelopControl = new DriveBaseTeleopControl(driverIF, driveBase, logger);
+		driveBaseTelopMaster = new DriveBaseTeleopMaster(driverIF, driveBase, logger);
 		testDriveBase = new SRXDriveBaseTest(driveBase, driveBaseCfg, logger);
 
 		// open program log and a data log
@@ -80,14 +80,14 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void teleopInit() {
 		driveBase.init();
-		driveBaseTelopControl.init();
+		driveBaseTelopMaster.init();
 
 	}
 	
 	// This function is called periodically during operator control
 	@Override
 	public void teleopPeriodic() {
-		driveBaseTelopControl.Periodic();
+		driveBaseTelopMaster.Periodic();
 		
 	}
 	

@@ -13,13 +13,13 @@ public class DriverIF {
 		xboxIF = new XboxIF();
 	}
 	// driver game controller methods
-	public double throttleAxis() {
+	public double getThrottleAxis() {
 		return xboxIF.LEFT_JOYSTICK_Y();	
 	}
-	public double turnAxis() {
+	public double getTurnAxis() {
 		return xboxIF.RIGHT_JOYSTICK_X();
 	}
-	public double wheelAxis() {
+	public double getWheelAxis() {
 		return xboxIF.RIGHT_JOYSTICK_Y();
 	}
 	public boolean getMecanumShiftSidewaysBtn() {

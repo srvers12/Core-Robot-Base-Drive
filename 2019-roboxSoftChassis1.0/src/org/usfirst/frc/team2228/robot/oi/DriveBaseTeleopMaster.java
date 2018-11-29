@@ -5,7 +5,7 @@ import org.usfirst.frc.team2228.robot.util.DebugLogger;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 // 
-public class DriveBaseTeleopControl {
+public class DriveBaseTeleopMaster {
 	
 	// Revisions:
 	// 181102 - renamed class, added wheel control, mecanum shiftSideways command
@@ -148,7 +148,7 @@ public class DriveBaseTeleopControl {
 		throttleAxis *= kMaxThrottlePowerLimit;
 		
 		// This is leveraged from culver drive/Team 33
-		// Integrate turn(x axis only) with a game controller car wheel action
+		// Integrate turn(x axis only) with a game controller to give car wheel action
 		if(!isWheelTurnActive){
 			// To turn game cntrller wheel function push left joystick to top of Y axis and use the round
 			// edge at top of the joystick to simulate a wheel
@@ -163,20 +163,21 @@ public class DriveBaseTeleopControl {
 			turnAxis *= kMaxTurnPowerLimit * (1 - (throttleAxis * throttleAxis));
 			}
 		} else{ 
+			// Turn off wheel axis if at x-y zero position
 			if((Math.abs(wheelAxis) < wheelAxisTurnOffStpt) && (Math.abs(turnAxis) < wheelAxisTurnOffStpt)){
 				isWheelTurnActive = false;
 			}
 			// Find the gameController joystick angle of x,y
 			turnAxisAngle = Math.toDegrees((double)Math.atan2(turnAxis,Math.abs(wheelAxis)));
 
-			// Limit wheel magnitude
+			// Limit wheel angle
 			turnAxisAngle = (turnAxisAngle > kMaxTurnAxisAngle)? kMaxTurnAxisAngle: turnAxisAngle;
 
 			// map angle to (-1 to 1)
 			turnAxis = turnAxisAngle / 90;
 
 			// Limit turn power with respect to throttle power
-			turnAxis *= kMaxTurnPowerLimit * (1 - (throttleAxis * throttleAxis)) * signWheelAxis;
+			turnAxis *= kMaxTurnPowerLimit * throttleAxis * signWheelAxis;
 		}
 		
 		// =======================================
@@ -209,7 +210,6 @@ public class DriveBaseTeleopControl {
 	kMaxThrottlePowerLimit = _kMaxThrottlePowerLimitLevel;
 	}
 	
-	
 	// ========================================
 	// SHUFFLEBOARD
 	private void setSmartDashBoardParmeters() {
@@ -224,7 +224,7 @@ public class DriveBaseTeleopControl {
 		double fTurn = _turnAxis;
 		
 		//developed by team 254 for the turnAxis stick to provide a more realistic feel for turnAxising???
-		// Filter provides a sine like output for turnAxis input. Makes low turnAxis input more responsive
+		// Filter(distorted sine) makes low turnAxis input more responsive and is flat at higher turnaxis input
 		fTurn = applySineFunction(fTurn);
 		fTurn = applySineFunction(fTurn);
 		fTurn = applySineFunction(fTurn);
@@ -249,12 +249,13 @@ public class DriveBaseTeleopControl {
 	
 	// ACCELERATION FILTER
 	// The accel filter follows the actions of the driver. If the
-	// driver exceeds the robot accel/decel capability, the throtle change is capped to prevent tipping
-	
+	// driver exceeds the robot accel/decel capability, the throtle change is capped to prevent tipping.
+	// Otherwise the robot follows the driver input command
 	private double applyAccelFilter(double _accelFilterThrottleValue) {
 		signThrottleValue = Math.signum(_accelFilterThrottleValue);
 		// Determine throtle delta from last avg
 		throttleChange = _accelFilterThrottleValue - ((throttleNminus1 + throttleNminus2) / 2);
+
 		// Cap throtle change
 		throttleChange = (Math.abs(throttleChange) > kThrotleMaxDeltaChange)? kThrotleMaxDeltaChange : throttleChange;
 

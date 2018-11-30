@@ -52,13 +52,6 @@ public class Robot extends IterativeRobot {
 
 		driveBaseTelopMaster = new DriveBaseTeleopMaster(driverIF, driveBase, logger);
 		testDriveBase = new SRXDriveBaseTest(driveBase, driveBaseCfg, logger);
-
-		// open program log and a data log
-		log.closecsvFile();
-		log.closelog();
-
-		log.fopenlog("/home/lvuser/log/");
-		log.opencsvFile("/home/lvuser/log/");
 		
 	}
 

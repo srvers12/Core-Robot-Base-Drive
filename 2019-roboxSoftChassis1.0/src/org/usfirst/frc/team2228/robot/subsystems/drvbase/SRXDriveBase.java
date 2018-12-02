@@ -55,6 +55,11 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 // public double getDriveStraightCorrection()
 // public boolean getIsDriveMoving()
 
+// ====================================
+// DATA COMMANDS
+//=====================================
+// public void smartDashboardDriveBaseData()
+// public void logSRXDriveData()
 
 // ===================================
 //	TELEOP MOTION COMMANDS
@@ -156,7 +161,7 @@ public class SRXDriveBase {
 	private RobotMap RobotMap;
 	private Faults leftFaults;
 	private Faults rightFaults;
-	
+	private Notifier pushAPI2SRXThread;
 	
 	// ===================================
 	// SRX MOTION PROFILE
@@ -175,15 +180,21 @@ public class SRXDriveBase {
 	private int SRXProfileState = 0;
 	private int bufferAccumCnt = 0;
 	private int profileNumPoints = 0;
-	private int SRXBufferSize = 128;
+	private int kSRXBufferSize = 128;
 	private int profileIndexPointer = 0;
 	private int profileCountAccumulator = 0;
 
 	// additional cache for holding the active trajectory point	
-	private double SRXTrajectoryPosition=0;
-	private double SRXTrajectoryVelocity=0; 
-	private double SRXTrajectoryHeading=0;
+	private double SRXRightTrajectoryPosition=0;
+	private double SRXRightTrajectoryVelocity=0; 
+	private double SRXRightTrajectoryHeading=0;
+	private double SRXRLeftTrajectoryPosition=0;
+	private double SRXLeftTrajectoryVelocity=0; 
+	private double SRXLeftTrajectoryHeading=0;
+	private double estProfileTimeMs = 0;
+	private double API2SRXThreadTimeSec = 0;
 	private double kBaseTrajPeriodMs = 0;
+
 	private boolean isSRXProfileMoveActive = false;
 
 	// ====================================	
@@ -195,8 +206,11 @@ public class SRXDriveBase {
 	
 	//private int loggingDataIncrement = 1;
 	
+	private int RightCruiseVelNativeUnits = 0;
 	private int RightAccelNativeUnits = 0;
+	private int LeftCruiseVelNativeUnits = 0;
 	private int LeftAccelNativeUnits = 0;
+	private int LeftRotateTimeSec = 0;
 	private double RightDistanceCnts = 0;
 	private double LeftDistanceCnts = 0;
 	
@@ -616,7 +630,7 @@ public class SRXDriveBase {
 	}
 	
 	// Reads encoder, velocity, current, error, and displays on smartdashboard
-	public void updateSRXDriveDataDisplay() {
+	public void smartDashboardDriveBaseData() {
 
 		// Display SRX module values
 		SmartDashboard.putNumber("BaseDrive-Right Bus Voltage", rightMasterMtr.getBusVoltage());
@@ -648,7 +662,8 @@ public class SRXDriveBase {
 
 			// log data header
 			islogSRXDriveDataActive = true;
-			msg("Right Bus Voltage,Right Output Voltage,Right Master Current,Right Encoder Count,Right Follower Current,Left Bus Voltage,Left Output Voltage,Left Master Current,Left Encoder Count,Left Follower Current");
+			msg("Right Bus Voltage,Right Output Voltage,Right Master Current,Right Encoder Count,Right Follower Current,
+				 Left Bus Voltage,Left Output Voltage,Left Master Current,Left Encoder Count,Left Follower Current");
 			} else {
 				msg(String.format(",%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f,%8.2f", 
 									rightMasterMtr.getBusVoltage(), 
@@ -700,15 +715,15 @@ public class SRXDriveBase {
 			rightFollowerMtr.set(ControlMode.Follower, rightMasterMtr.getDeviceID());
 			leftFollowerMtr.set(ControlMode.Follower, leftMasterMtr.getDeviceID());
 		}
-		
+		// Check for incorrect encoder input phase
 		if (SRXDriveBaseCfg.isSRXClosedLoopEnabled) {
 			rightMasterMtr.getFaults(rightFaults);
 			leftMasterMtr.getFaults(leftFaults);
 			If (rightFaults.SensorOutOfPhase || leftFaults.SensorOutOfPhase){
 
-				//Fault detected - change control mode to open loop percent output
-				rightMasterMtr.set(ControlMode.PercentOutput,rightCmdLevel);
-				leftMasterMtr.set(ControlMode.PercentOutput,leftCmdLevel);
+				//Fault detected - change control mode to open loop percent output and stop motor
+				rightMasterMtr.set(ControlMode.PercentOutput,0);
+				leftMasterMtr.set(ControlMode.PercentOutput,0);
 			} else {
 
 				// Output commands to SRX modules set as [% from (-1 to 1)] x MaxVel_VelNativeUnits
@@ -842,8 +857,6 @@ public class SRXDriveBase {
 		return isStdTrapezoidalRotateActive;
 	}
 	
-
-	
 	// This method performs a SRX magic motion command from user calculated values
 	// All SRXBaseMove parms are in native units 
 	
@@ -869,7 +882,6 @@ public class SRXDriveBase {
 			rightMasterMtr.configMotionCruiseVelocity(_rightCruiseVel, SRXTimeoutValueMs);
 			rightMasterMtr.configMotionAcceleration(_rightAccel, SRXTimeoutValueMs);
 
-			// todo -  this does not match rgt mstr
 			leftMasterMtr.setStatusFramePeriod(StatusFrameEnhanced.Status_10_MotionMagic, 10, SRXTimeoutValueMs);
 			leftMasterMtr.selectProfileSlot(SRXDriveBaseCfg.kslotIDx, SRXDriveBaseCfg.kPIDLoopIDx);	
 			leftMasterMtr.setSelectedSensorPosition(SRXDriveBaseCfg.kslotIDx, SRXDriveBaseCfg.kPIDLoopIDx, SRXTimeoutValueMs);
@@ -878,11 +890,8 @@ public class SRXDriveBase {
 
 			
 		} else {
-			SRXMotionLeftPos = leftMasterMtr.getActiveTrajectoryPosition();
-			SRXMotionLeftVel = leftMasterMtr.getActiveTrajectoryVelocity();
-			SRXMotioRightPos = rightMasterMtr.getActiveTrajectoryPosition();
-			SRXMotioRightVel = rightMasterMtr.getActiveTrajectoryVelocity();
 			
+			// Check for program errors or end of index
 			if (((Math.abs(SRXMotionLeftPos) >= Math.abs(_leftDistance)) 
 					&& (Math.abs(SRXMotioRightPos) >= Math.abs(_rightDistance)))
 					|| distanceIF.collisionDetected()
@@ -893,23 +902,29 @@ public class SRXDriveBase {
 				methodTime = Timer.getFPGATimestamp() - methodStartTime;
 				msg("SRX Motion (Sec) = " + methodTime);
 				msg("END SRX MOTION  ========================");
+			} else {
+		
+				// Output commands to SRX's
+				rightFollowerMtr.set(ControlMode.Follower, rightMasterMtr.getDeviceID());
+				leftFollowerMtr.set(ControlMode.Follower, leftMasterMtr.getDeviceID());
+				
+				rightMasterMtr.set(ControlMode.MotionMagic, _rightDistance); 
+				leftMasterMtr.set(ControlMode.MotionMagic, _leftDistance);
+				
+				if (isConsoleDataEnabled || isLoggingDataEnabled){
+					SRXMotionLeftPos = leftMasterMtr.getActiveTrajectoryPosition();
+					SRXMotionLeftVel = leftMasterMtr.getActiveTrajectoryVelocity();
+					SRXMotioRightPos = rightMasterMtr.getActiveTrajectoryPosition();
+					SRXMotioRightVel = rightMasterMtr.getActiveTrajectoryVelocity();
+					msg(String.format("LftEnc:,%-8.0f, ==RgtEnc:,%-8.0f, ==LftSRXVel:,%-8.2f, ==LftSRXPos:,%-8.2f, ==RgtSRXVel:,%-8.2f, ==RgtSRXPos:,%-8.2f %n", 
+										leftSensorPositionRead, 
+										rightSensorPositionRead,
+										SRXMotionLeftVel,
+										SRXMotionLeftPos,
+										SRXMotioRightVel,
+										SRXMotioRightPos));
+				}
 			}
-		}
-		// Output commands to SRX's
-		rightFollowerMtr.set(ControlMode.Follower, rightMasterMtr.getDeviceID());
-		leftFollowerMtr.set(ControlMode.Follower, leftMasterMtr.getDeviceID());
-		
-		rightMasterMtr.set(ControlMode.MotionMagic, _rightDistance); 
-		leftMasterMtr.set(ControlMode.MotionMagic, _leftDistance);
-		
-		if (isConsoleDataEnabled || isLoggingDataEnabled){
-			msg(String.format("LftEnc:,%-8.0f, ==RgtEnc:,%-8.0f, ==LftSRXVel:,%-8.2f, ==LftSRXPos:,%-8.2f, ==RgtSRXVel:,%-8.2f, ==RgtSRXPos:,%-8.2f %n", 
-								leftSensorPositionRead, 
-								rightSensorPositionRead,
-								SRXMotionLeftVel,
-								SRXMotionLeftPos,
-								SRXMotioRightVel,
-								SRXMotioRightPos));
 		}
 		return isSRXMoveActive;
 	}
@@ -941,82 +956,83 @@ public class SRXDriveBase {
 			TrajectoryPoint trajectoryPointRight = new TrajectoryPoint();
 			TrajectoryPoint trajectoryPointLeft = new TrajectoryPoint();
 
-			// set the base trajectory period to zero, use the individual trajectory period below
+			// set the base trajectory period to zero, use the profile trajectory period
 			rightMasterMtr.configMotionProfileTrajectoryPeriod(0, SRXTimeoutValueMs);
 			leftMasterMtr.configMotionProfileTrajectoryPeriod(0, SRXTimeoutValueMs);
 
+			// set status frame update time-ms
 			rightMasterMtr.setStatusFramePeriod(StatusFrameEnhanced.Status_10_MotionMagic, 10, SRXTimeoutValueMs);
+			leftMasterMtr.setStatusFramePeriod(StatusFrameEnhanced.Status_10_MotionMagic, 10, SRXTimeoutValueMs);
 
 			//When we do start running our state machine start at the beginning.
 			SRXProfileState = 0;
-			 // todo - correct method timeout
-			 methodStartTime = Timer.getFPGATimestamp();
-			// Any time you have a state machine that waits for external events, its a
-			// good idea to add a timeout. Set to -1 to disable. Set to nonzero to count
-			private int profileStateLoopCnt = -1;
 
-			// Just a state timeout to make sure we don't get stuck anywhere. Each loop is about 20ms.
-			private static final int kMaxCntForNumOfLoops = 10;
-			profileStateLoopCnt = -1;
+			// Determine profile timeout time
+			methodStartTime = Timer.getFPGATimestamp();
+			estProfileTimeMs = (pointsRight[1][2] * profileNumPoints) + 500;
 
+			// todo - next two lines ??
 			rightMasterMtr.changeMotionControlFramePeriod(5);
 			driveLefttMasterMtr.changeMotionControlFramePeriod(5);
 
-			// Additional cache for holding the active trajectory point
-			SRXTrajectoryPosition = 0; 
-			SRXTrajectoryVelocity = 0; 
-			SRXTrajectoryHeading = 0;
+			// Create a periodic task tread to funnel our trajectory points into talon.
+			// Generally speaking you want to call it at least twice as fast as the duration
+			// of your trajectory points. 
+			class PeriodicRunnable implements java.lang.Runnable {
+				public void run() {  
+					rightMasterMtr.processMotionProfileBuffer(); 
+					leftMasterMtr.processMotionProfileBuffer();    
+				}
+			}
+			Notifier pushAPI2SRXThread = new Notifier(new PeriodicRunnable());
 
 		} else {
-			
+
 			//Get the motion profile status every loop
 			rightMasterMtr.getMotionProfileStatus(SRXProfileStatusRight);
 			driveLefttMasterMtr.getMotionProfileStatus(SRXProfileStatusLeft);
 
-			// todo - check profile timeout
-			// did we get an underrun condition since last time we checked ?
-			if (SRXProfileStatusRight.hasUnderrun) { 
-				msg("An UnderRun has occured");
-				
-				// clear the error(This flag does not auto clear) and exit-something is wrong							
-				rightMasterMtr.clearMotionProfileHasUnderrun(0);
-				isSRXProfileMoveActive = false;
-				break;
-			}
-			// todo - check profile timeout - calculate from profile time	
-			//track time, this is rudimentary but that's okay, we just want to make
-			//sure things never get stuck.
-			if (profileStateLoopCnt < 0) {
-				//do nothing, timeout is disabled
-			} else {
-				// our timeout is nonzero
-				if (profileStateLoopCnt == 0) {
-					
-					// something is wrong. Talon is not present, unplugged, breaker tripped
-					// todo error to take care of
-					Instrumentation.OnNoProgress();
-				} else {
-					--profileStateLoopCnt;
-				}
-			}
+			SRXRightTrajectoryPosition = rightMasterMtr.getActiveTrajectoryPosition();
+			SRXRightTrajectoryVelocity = rightMasterMtr.getActiveTrajectoryVelocity(); 
+			SRXRightTrajectoryHeading = rightMasterMtr.getActiveTrajectoryHeading();
+			SRXRLeftTrajectoryPosition = leftMasterMtr.getActiveTrajectoryPosition();
+			SRXLeftTrajectoryVelocity = leftMasterMtr.getActiveTrajectoryVelocity(); 
+			SRXLeftTrajectoryHeading = leftMasterMtr.getActiveTrajectoryHeading();
 
-			// First check if we are in MP mode
-			if (rightMasterMtr.getControlMode() != ControlMode.MotionProfile) {
+			// Check for errors - program hangup, change of mode, profile underrun	
+			if ((Timer.getFPGATimestamp() > estProfileTimeMs) || 
+					(rightMasterMtr.getControlMode() != ControlMode.MotionProfile) ||
+					SRXProfileStatusRight.hasUnderrun) {
+
+				// Profile program error detected - stop everything
+				rightMasterMtr.clearMotionProfileHasUnderrun(0);
+				leftMasterMtr.clearMotionProfileHasUnderrun(0);
+
+				rightMasterMtr.set(ControlMode.MotionProfile, SetValueMotionProfile.Disable);
+				leftMasterMtr.set(ControlMode.MotionProfile, SetValueMotionProfile.Disable);
+
+				pushAPI2SRXThread.stop();
+				
 				isSRXProfileMoveActive = false;
-			} else {	
+				
+			} else {
 				// State machine in MP control mode to load profile buffer and check for end of profile
 				switch (SRXProfileState) {
 					case 0: 
 						// First load of the profile buffer
 						bufferAccumCnt = (profileNumPoints < kSRXBufferSize)?  profileNumPoints-1: kBufferCntMin*2;
 						profileIndexPointer = 0;
-						fillProfileBuffer(profileIndexPointer, bufferAccumCnt);
-						
+						fillProfileAPIBuffer(profileIndexPointer, bufferAccumCnt);
+
+						// Want to load SRX buffer 2x faster than SRX profile point execute time(ms)
+						API2SRXThreadTimeSec = ((pointsRight[1][2])/2)/1000;
+						pushAPI2SRXThread.startPeriodic(API2SRXThreadTimeSec);
+
 						SRXProfileState = 1;
 						profileIndexPointer = bufferAccumCnt;
-						break;
+					break;
 					case 1: 
-						// wait for MotionProfile API to stream to Talon motionProfile buffer
+						// Wait for MotionProfile API to stream to Talon motionProfile buffer
 						if (SRXProfileStatusRight.TopBufferCnt == 0){
 
 							// Start motion profile
@@ -1026,14 +1042,15 @@ public class SRXDriveBase {
 							// Wait til SRX profile buffer is a low content count then load more trajectory points
 							SRXProfileState = 2;
 						}
-						break;
+					break;
 					case 2:
+						// Continue loading SRX buffer if at min trajectory point count
 						if ((SRXProfileStatusRight.TopBufferCnt == 0) &&
 								(SRXProfileStatusRight.BottomBufferCnt < kBufferCntMin)){
 				
 							// check if last trajectory point is left to load
 							if(bufferAccumCnt == profileNumPoints-1){
-								fillProfileBuffer(profileIndexPointer, profileNumPoints);
+								fillProfileAPIBuffer(profileIndexPointer, profileNumPoints);
 
 								// all the profile points have been loaded wait for profile end
 								SRXProfileState = 3;
@@ -1042,42 +1059,39 @@ public class SRXDriveBase {
 							} else if(profileNumPoints-bufferAccumCnt >= kBufferCntMin) {
 								profileIndexPointer = bufferAccumCnt;
 								bufferAccumCnt += kBufferCntMin;
-								fillProfileBuffer(profileIndexPointer, bufferAccumCnt);
+								fillProfileAPIBuffer(profileIndexPointer, bufferAccumCnt);
 								SRXProfileState = 2;	
 							} else {
 								profileIndexPointer = bufferAccumCnt;
 								bufferAccumCnt = profileNumPoints-1;
-								fillProfileBuffer(profileIndexPointer, bufferAccumCnt);
+								fillProfileAPIBuffer(profileIndexPointer, bufferAccumCnt);
 								SRXProfileState = 2;	
 							}
 						}	
-						break;
+					break;
 					case 3: 
 		
 						// Check if profile is done
 						if (SRXProfileStatusRight.activePointValid && SRXProfileStatusRight.isLast) {
 							
 							rightMasterMtr.set(ControlMode.MotionProfile, SetValueMotionProfile.Hold);
-							driveLefttMasterMtr.set(ControlMode.MotionProfile, SetValueMotionProfile.Hold);
+							lefttMasterMtr.set(ControlMode.MotionProfile, SetValueMotionProfile.Hold);
 
+							pushAPI2SRXThread.stop();
+							
 							isSRXProfileMoveActive = false;
 						}
-						break;
+					break;
 				}
-
-				SRXTrajectoryHeading = rightMasterMtr.getActiveTrajectoryHeading();
-				SRXTrajectoryPosition = rightMasterMtr.getActiveTrajectoryPosition();
-				SRXTrajectoryVelocity = rightMasterMtr.getActiveTrajectoryVelocity();	
-			}
+			}	
 		}
 		return isSRXProfileMoveActive;
 	}
 
-
-	private void fillProfileBuffer(int _profileIndexPtr, int _profileAccumCnt) {
+	private void fillProfileAPIBuffer(int _profileIndexPtr, int _profileAccumCnt) {
 
 		// for each point, fill trajectory point structure and pass it to API to load Top buffer
-		// This will then be loaded into the SRX buffer via API
+		// This will then be loaded into the SRX buffer via API "processMotionProfileBuffer()""
 		for (int i = _profileIndexPtr; i < _profileAccumCnt; i++) {
 			trajectoryPointRight.position = pointsRight[i][0];
 			trajectoryPointLeft.position = pointsLeft[i][0];

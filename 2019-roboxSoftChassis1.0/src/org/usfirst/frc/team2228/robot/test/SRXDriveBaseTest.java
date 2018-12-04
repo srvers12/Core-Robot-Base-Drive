@@ -18,21 +18,25 @@ public class SRXDriveBaseTest {
 	private SRXDriveBase driveBase;
 	private SRXDriveBaseCfg SRXdriveBaseCfg; 
 
-    private double CAL_kDriveStraightFwdCorrection = SRXDriveBaseCfg.kDriveStraightFwdCorrection;
-	private double CAL_kDriveStraightRevCorrection = SRXDriveBaseCfg.kDriveStraightRevCorrection;
-	private double CAL_RightDriveCmdLevel = 0;
-	private double CAL_LeftDriveCmdLevel = 0;
+    private double Tst_kDriveStraightFwdCorrection = SRXDriveBaseCfg.kDriveStraightFwdCorrection;
+	private double Tst_kDriveStraightRevCorrection = SRXDriveBaseCfg.kDriveStraightRevCorrection;
+	private double Tst_RightDriveCmdLevel = 0;
+	private double Tst_LeftDriveCmdLevel = 0;
 	private double CAL_Throttle = 0;
-    private double CAL_turn = 0;
+	private double CAL_turn = 0;
+	private double methodStartTime = 0;
     
 	private boolean isTestBtnActive = false;
 	private boolean isMtrTestBtnActive = false;
+	private boolean isStepFncTestBtnActive = false;
 	private boolean isTestStepFunctionActive = false;
 	private boolean isTestMoveForStraightCalActive = false;
 	private boolean isTestMethodSelectionActive = false;
 	private boolean isConsoleDataEnabled = true;
+
 	private String lastMsgString = " ";
 
+	
 	
 
     // =====================
@@ -51,17 +55,36 @@ public class SRXDriveBaseTest {
 		isTestMoveForStraightCalActive = false;
 		isTestMethodSelectionActive = false;
 		
-        // Drivebase setup methods
-        SmartDashboard.putBoolean("TstBtn-StepFnc:", false);
-		SmartDashboard.putBoolean("TstBtn-DrvStraightCal:", false);
-		SmartDashboard.putBoolean("TstBtn-MotorEncoderTest:", false);
+        // Drivebase setup method calls
+        SmartDashboard.putBoolean("drvB-TstBtn-StepFnc:", false);
+		SmartDashboard.putBoolean("drvB-TstBtn-DrvStraightCal:", false);
+		SmartDashboard.putBoolean("drvB-TstBtn-MotorEncoderTest:", false);
 
-		// DriveBase autonomous motion methods
-		SmartDashboard.putBoolean("TstBtn-MoveToPos:", false);
-		SmartDashboard.putBoolean("TstBtn-RotateToAngle:", false);
-		SmartDashboard.putBoolean("TstBtn-ProfileMove:", false);
+		// DriveBase autonomous motion method calls
+		SmartDashboard.putBoolean("drvB-TstBtn-MoveToPos:", false);
+		SmartDashboard.putBoolean("drvB-TstBtn-RotateToAngle:", false);
+		SmartDashboard.putBoolean("drvB-TstBtn-ProfileMove:", false);
 
-		SmartDashboard.putBoolean("TstBtn-EnableSRXDriveBaseConsoleDisplay:", isConsoleDataEnabled);
+		SmartDashboard.putBoolean("drvB-TstBtn-EnableSRXDriveBaseConsoleDisplay:", isConsoleDataEnabled)
+		
+		SmartDashboard.putNumber("drvB-Left Encoder:", leftSensorPositionRead);
+		SmartDashboard.putNumber("drvB-Right Encoder:", rightSensorPositionRead);
+		
+		SmartDashboard.putNumber("drvB-Kp_encoderHeadingPID:", Kp_encoderHeadingPID);
+		SmartDashboard.putNumber("drvB-Kd_encoderHeadingPID:", Kd_encoderHeadingPID);
+		
+		SmartDashboard.putNumber("drvB-kDriveStraightFwdCorrection:", drvBtst-kDriveStraightFwdCorrection);
+		SmartDashboard.putNumber("drvB-kDriveStraightRevCorrection:", drvBtst-kDriveStraightRevCorrection);
+		
+		SmartDashboard.putNumber("drvB-Tst_RightDriveCmdLevel:", Tst_RightDriveCmdLevel);
+		SmartDashboard.putNumber("drvB-Tst_LeftDriveCmdLevel:", Tst_LeftDriveCmdLevel);
+		
+		SmartDashboard.putNumber("drvB-CAL_Throttle:", CAL_Throttle);
+		SmartDashboard.putNumber("drvB-CAL_turn:", CAL_turn);
+		
+		SmartDashboard.putNumber("drvB-Val_encoderHeadingDeg:", encoderHeadingDeg);
+		SmartDashboard.putNumber("drvB-Val_encoderPIDCorrection:", encoderPIDCorrection);
+		
 
     }
 
@@ -74,66 +97,66 @@ public class SRXDriveBaseTest {
 		if(!isTestMethodSelectionActive){
 			isTestMethodSelectionActive = true;
 			
-			Kp_encoderHeadingPID = SmartDashboard.getNumber("Kp_encoderHeadingPID:", Kp_encoderHeadingPID);
-			//Ki_encoderHeadingPID = SmartDashboard.getNumber("Ki_encoderHeadingPID:", Ki_encoderHeadingPID);
-			//Kd_encoderHeadingPID = SmartDashboard.getNumber("Kd_encoderHeadingPID:", Kd_encoderHeadingPID);
 			
 		} else {
-			
-			if (SmartDashboard.getBoolean("TstBtn-MotorEncoderTest:", true)){
+
+			//=====================
+			// MOTOR ENCODER TEST
+			// ====================
+			// Run motors to in open loop to test encoder directions
+			if (SmartDashboard.getBoolean("drvB-TstBtn-MotorEncoderTest:", true)){
 				if(!isMtrTestBtnActive){
 					msg("START MOTOR ENCODER TEST=============");
 					methodStartTime = Timer.getFPGATimestamp();
-					isMtrTestBtnActive = true;	
+					isMtrTestBtnActive = true;
+					
+					// clear encoder registers
 					driveBase.setRightEncPositionToZero();
 					driveBase.setRightSensorPositionToZero();
 					driveBase.setLeftEncPositionToZero();
 					driveBase.setLeftSensorPositionToZero();
-						
+					driveBase.setTestEnable(true);
+
 				} else if(Timer.getFPGATimestamp() - methodStartTime > .2){
 				
-					CAL_RightDriveCmdLevel = SmartDashboard.getNumber("CAL_RightDriveCmdLevel:", CAL_RightDriveCmdLevel);
-					CAL_LeftDriveCmdLevel = SmartDashboard.getNumber("CAL_LeftDriveCmdLevel:", CAL_LeftDriveCmdLevel);
+					Tst_RightDriveCmdLevel = SmartDashboard.getNumber("drvB-Tst_RightDriveCmdLevel:", Tst_RightDriveCmdLevel);
+					Tst_LeftDriveCmdLevel = SmartDashboard.getNumber("drvB-Tst_LeftDriveCmdLevel:", Tst_LeftDriveCmdLevel);
 					
-					// checkTestMotorEncoderSetUp()
-					checkTestMotorEncoderSetUp();
+					driveBase.SetDriveTrainCmdLevel(Tst_RightDriveCmdLevel, Tst_LeftDriveCmdLevel);
 				}
 			} else if(isMtrTestBtnActive) {
 				msg("END MOTOR ENCODER TEST=============");
 				isTestMethodSelectionActive = false;
 				isMtrTestBtnActive = false;
-				driveBase.setStopMotors();
+				driveBase.StopMotors();
+				driveBase.setTestEnable(false);
 			}
-			
-			if(SmartDashboard.getBoolean("TstBtn-StepFnc:", false)){
-				if(!isTestBtnActive){
+			// =========================
+			// STEP FUNCTION FOR PID TEST
+			//==========================
+			if(SmartDashboard.getBoolean("drvB-TstBtn-StepFnc:", false)){
+				if(!isStepFncTestBtnActive ){
 					msg("SHUFFLE START TEST STEP FUNCTION=============");
 					isTestBtnActive = true;
-					if (isLoggingDataEnabled){
-						log.fopencsv("/home/lvuser/log/SRXDrvStepFnc-" + loggingDataIncrement);
-					}
 					driveBase.setRightSensorPositionToZero();
 					driveBase.setLeftSensorPositionToZero();
-					driveBase.setDriveTrainRamp(2);
 					Timer.delay(0.2);
 				}
 				// testStepFunction(double _stepFunctionPower, double _stepFunctionTimeSec, boolean _isTestForRightDrive)
 				if(!testStepFunction(.3, 2, false)){
 					isTestMethodSelectionActive = false;
-					isTestBtnActive = false;
-					if(isLoggingDataEnabled){
-						isLoggingActive = false;
-						loggingDataIncrement += 1;;
-						log.closecsv();
-					}
-					SmartDashboard.putBoolean("TstBtn-StepFnc:", false);
+					isStepFncTestBtnActive = false;
+					SmartDashboard.putBoolean("drvB-TstBtn-StepFnc:", false);
 					msg("SHUFFLE END TEST STEP FUNCTION=============");
 				}	
 			}
 			
-			if(SmartDashboard.getBoolean("TstBtn-DrvStraightCal:", false)){
+			// =====================================
+			// DRIVE STRAIGHT CORRECTION FACTOR TEST
+			// =====================================
+			if(SmartDashboard.getBoolean("drvB-TstBtn-DrvStraightCal:", false)){
 				
-				CAL_kDriveStraightFwdCorrection = SmartDashboard.getNumber("CAL_kDriveStraightFwdCorrection:", CAL_kDriveStraightFwdCorrection);
+				Tst_kDriveStraightFwdCorrection = SmartDashboard.getNumber("Tst_kDriveStraightFwdCorrection:", Tst_kDriveStraightFwdCorrection);
 				if(!isTestBtnActive){
 					msg("SHUFFLE START DRIVE STRAIGHT CAL=============");
 					isTestBtnActive = true;
@@ -155,13 +178,21 @@ public class SRXDriveBaseTest {
 						loggingDataIncrement += 1;
 						log.closecsv();
 					}
-					SmartDashboard.putBoolean("TstBtn-DrvStraightCal:", false);
+					SmartDashboard.putBoolean("drvB-TstBtn-DrvStraightCal:", false);
 					msg("SHUFFLE END DRIVE STRAIGHT CAL============");
 				}	
 			}
 			
+			// ======================
+			// SRX MOVE
+			// ======================
+			if(SmartDashboard.getBoolean(""drvB-TstBtn-MoveToPos:", false)){
 			
+			}
 			
+			// =====================
+			// SRX ROTATE
+			// =====================
 			if(SmartDashboard.getBoolean("TstBtn-RotateToAngle:", false)){
 				if(!isTestBtnActive){
 					msg("SHUFFLE START ROTATE TO ANGLE=============");
@@ -211,83 +242,45 @@ public class SRXDriveBaseTest {
 		
 		}
 	}
+
+	
+
 	//===============================
 	// TEST STEP FUNCTION
 	//===============================
 	// This provides a pulse(low-High-low) and stays in lowpower. Need to stop motors or call constantly to produce a square wave
-	public boolean testStepFunction(double _stepFunctionPower, double _stepFunctionTimeSec, boolean _isTestForRightDrive) {
+	public boolean testStepFunction(double _stepFunctionPower, double _stepFnctHighTimeSec, boolean _isTestForRightDrive) {
 		if (SRXDriveBaseCfg.isSRXClosedLoopEnabled) {
-			cycleCount += 1;
-			// initialize and start at low speed
+			// initialize and step to a speed level
 			if (!isTestStepFunctionActive) {
 				isTestStepFunctionActive = true;
 				methodStartTime = Timer.getFPGATimestamp();
 				msg("START TEST STEP FUNCTION ===============================");
-				cycleCount = 0;
-				stepFunctionSpeed = _stepFunctionPower * SRXDriveBaseCfg.MaxVel_VelNativeUnits;
-				// (sec / 20ms) [iterative robot scan time]
-				stepFunctionStopCount = (int)(_stepFunctionTimeSec / 0.02);
-			} else if(cycleCount > stepFunctionStopCount) {
-				msg("TEST STEP FUNCTION AT TIME STOP=======================");
-				stepFunctionSpeed = 0;
-				
-				// Delay for a specified time to have motion stopped
-				if(!delay(3)){
-					isTestStepFunctionActive = false;
-					msg("TEST STEP FUNCTION DONE=======================");
-					methodTime = Timer.getFPGATimestamp() - methodStartTime;
-					msg("Step Function Time(Sec) = " + methodTime);
+				if(_isTestForRightDrive){
+					Tst_RightDriveCmdLevel = _stepFunctionPower;
+					Tst_LeftDriveCmdLevel = 0;
+				} else {
+					Tst_RightDriveCmdLevel = 0;
+					Tst_LeftDriveCmdLevel = _stepFunctionPower;
 				}
-			}
-			//todo -  this needs to be in drivebase as a set
-			rightFollowerMtr.set(ControlMode.Follower, rightMasterMtr.getDeviceID());
-			leftFollowerMtr.set(ControlMode.Follower, leftMasterMtr.getDeviceID());
-			
-			if (_isTestForRightDrive){
-				rightMasterMtr.set(ControlMode.Velocity, stepFunctionSpeed);
-				leftMasterMtr.set(ControlMode.Velocity, 0);
-			} else {
-				leftMasterMtr.set(ControlMode.Velocity, stepFunctionSpeed);
-				rightMasterMtr.set(ControlMode.Velocity, 0);
-			}
+				driveBase.SetDriveTrainCmdLevel( _rightCMDLevel, _leftCMDLevel);
 				
-			// +++++++++++++++++++++++++++++++++++++
-			// Display data
-			System.out.printf("StepVel:%-8.3f==RightVel:%-8.2f==RightErr:%-8.2f==LeftVel:%-8.2f==LeftErr:%-8.2f%n",
-					stepFunctionSpeed,
-					driveBase.getRightSensorVelocity(),
-					driveBase.getRightCloseLoopError(),
-					driveBase.getLeftSensorVelocity(),
-					driveBase.getLeftCloseLoopError());
-		} 
-		return isTestStepFunctionActive;
+			} else if(!delay(_stepFnctHighTimeSec)) {
+				driveBase.stopMotors();
+				msg("TEST STEP FUNCTION DONE=======================");
+				methodTime = Timer.getFPGATimestamp() - methodStartTime;
+				msg("Step Function Time(Sec) = " + methodTime);
+				isTestStepFunctionActive = false;
+			}
+			return isTestStepFunctionActive;
+			
+		} else {
+			return isTestStepFunctionActive;
+
+		}
 	}
 	
-		//===================================
-		// TEST - MOTOR-ENCODER SETUP TEST
-		//===================================
-		public void checkTestMotorEncoderSetUp(){ 
-			
-			rightEncoderPosition = rightMasterMtr.getSensorCollection().getQuadraturePosition();
-			rightSensorPositionRaw = rightMasterMtr.getSelectedSensorPosition(SRXDriveBaseCfg.kPIDLoopIDx);
-			rightSensorPositionRead = driveBase.getRightSensorPosition();
-			
-			leftEncoderPosition = leftMasterMtr.getSensorCollection().getQuadraturePosition();
-			leftSensorPositionRaw = leftMasterMtr.getSelectedSensorPosition(SRXDriveBaseCfg.kPIDLoopIDx);
-			leftSensorPositionRead = driveBase.getLeftSensorPosition();
-		
-			SetDriveTrainCmdLevel(CAL_RightDriveCmdLevel, CAL_LeftDriveCmdLevel);
-			
-			// +++++++++++++++++++++++++++++++++
-			// DATA DISPLAY
-			System.out.printf("REnc:%-4.0f =RESen:%-4.0f =RESenRd:%-4.0f =LEnc:%-4.0f =LESen:%-4.0f =LESenRd:%-4.0f%n", 
-								rightEncoderPosition, 
-								rightSensorPositionRaw, 
-								rightSensorPositionRead,
-								leftEncoderPosition,
-								leftSensorPositionRaw,
-								leftSensorPositionRead);
-		}
+
 	
 	//===================================
 	// TEST DRIVE STRAIGHT CALIBRATION

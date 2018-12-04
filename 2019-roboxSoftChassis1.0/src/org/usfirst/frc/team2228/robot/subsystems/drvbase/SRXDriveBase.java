@@ -27,7 +27,7 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 // public void setCorrectionSensor(int _CorrectionSensorSelect)
 
 // public void setBrakeMode(boolean _isBrakeEnabled)
-// public void setStopMotors()
+// public void StopMotors()
 // public void setDriveBaseRamp(double _SecToMaxPower)
 
 // private void clearSRXDriveBasePrgFlgs()
@@ -248,6 +248,7 @@ public class SRXDriveBase {
 	private double leftEncoderPosition = 0;
 	//private double leftSensorPositionRaw = 0;
 	private double kStdAccelTimeSegment = 3;
+	private double stepFunctionSpeed = 0;
 	
 	//private double MinimumRadiusDistanceAddition = 4;
 	//private double RobotDirectionSign = 0;
@@ -263,6 +264,8 @@ public class SRXDriveBase {
 	private boolean isStdTrapezoidalMoveActive = false;
 	private boolean isDriveTrainMoving = false;
 	private boolean isMecanumShiftEnabled = false;
+	private boolean isTestEnabled = false;
+	private boolean isStepTestEnabled = false;
 	
 	private String logSRXDriveString = " ";
 	private String lastMsgString = " ";
@@ -446,13 +449,29 @@ public class SRXDriveBase {
 		}
 	}
 
-	public void setStopMotors() {
+	public void StopMotors() {
 		rightMasterMtr.setNeutralOutput();
 		leftMasterMtr.setNeutralOutput();
 	}
 	
 	public void setEnableConsoleData(boolean _consoleData){
 		isConsoleDataEnabled = _consoleData;
+	}
+	public void setTestEnable(int _testNumber){
+		switch(_testnumber){
+			case 0:
+				isEncoderTestEnabled = false;
+				isStepTestEnabled = false;
+			break;
+			case 1:
+				isEncoderTestEnabled = true;
+			break;
+			case 2:
+				isStepTestEnabled = true;
+			break;
+			default:
+			break;
+		}
 	}
 
 	public void setMecanumShiftSidewaysEnable(boolean _mecanumShiftState){
@@ -466,7 +485,7 @@ public class SRXDriveBase {
 		loadSmartDashBoardParmeters();
 		
 		// Stop motors and clear position counters
-		setStopMotors();
+		StopMotors();
 		setDriveBaseRamp(0);
 		setRightSensorPositionToZero();
 		setLeftSensorPositionToZero();
@@ -510,6 +529,7 @@ public class SRXDriveBase {
 		isMecanumShiftEnabled = false;
 		islogSRXDriveDataActive = false;
 		isSRXProfileMoveActive = false;
+		isTestEnabled = false;
 	}
 	
 	
@@ -606,29 +626,7 @@ public class SRXDriveBase {
 	// =======================================================================================
 	// ======================================================================================
 	
-	private void loadSmartDashBoardParmeters() {
-	
-		
-		SmartDashboard.putNumber("Left Encoder:", leftSensorPositionRead);
-		SmartDashboard.putNumber("Right Encoder:", rightSensorPositionRead);
-		
-		SmartDashboard.putNumber("Kp_encoderHeadingPID:", Kp_encoderHeadingPID);
-		SmartDashboard.putNumber("Ki_encoderHeadingPID:", Ki_encoderHeadingPID);
-		SmartDashboard.putNumber("Kd_encoderHeadingPID:", Kd_encoderHeadingPID);
-		
-		SmartDashboard.putNumber("CAL_kDriveStraightFwdCorrection:", CAL_kDriveStraightFwdCorrection);
-		SmartDashboard.putNumber("CAL_kDriveStraightRevCorrection:", CAL_kDriveStraightRevCorrection);
-		
-		SmartDashboard.putNumber("CAL_RightDriveCmdLevel:", CAL_RightDriveCmdLevel);
-		SmartDashboard.putNumber("CAL_LeftDriveCmdLevel:", CAL_LeftDriveCmdLevel);
-		
-		SmartDashboard.putNumber("CAL_Throttle:", CAL_Throttle);
-		SmartDashboard.putNumber("CAL_turn:", CAL_turn);
-		
-		SmartDashboard.putNumber("Val_encoderHeadingDeg:", encoderHeadingDeg);
-		SmartDashboard.putNumber("Val_encoderPIDCorrection:", encoderPIDCorrection);
-	}
-	
+
 	// Reads encoder, velocity, current, error, and displays on smartdashboard
 	public void smartDashboardDriveBaseData() {
 
@@ -707,6 +705,35 @@ public class SRXDriveBase {
 		rightCmdLevel = _rightCMDLevel;
 		leftCmdLevel = _leftCMDLevel;
 		
+		if(isEncoderTestEnabled) {
+			// +++++++++++++++++++++++++++++++++
+			// DATA DISPLAY FOR CHECKING ENCODERS AND ENCODER DIRECTION
+			System.out.printf("REnc:%-4.0f =RESen:%-4.0f =RESenRd:%-4.0f =LEnc:%-4.0f =LESen:%-4.0f =LESenRd:%-4.0f%n", 
+								rightMasterMtr.getSensorCollection().getQuadraturePosition(),
+								rightMasterMtr.getSelectedSensorPosition(SRXDriveBaseCfg.kPIDLoopIDx),
+								getRightSensorPosition(),
+								
+								leftMasterMtr.getSensorCollection().getQuadraturePosition(),
+								leftMasterMtr.getSelectedSensorPosition(SRXDriveBaseCfg.kPIDLoopIDx),
+								getLeftSensorPosition());
+		}
+
+		if(isStepTestEnabled) {
+			if(rightCmdLevel>0){
+				stepFunctionSpeed = rightCmdLevel * SRXDriveBaseCfg.MaxVel_VelNativeUnits;
+			} else {
+				stepFunctionSpeed = leftCmdLevel * SRXDriveBaseCfg.MaxVel_VelNativeUnits;
+			}
+			// +++++++++++++++++++++++++++++++++++++
+			// Display data
+			System.out.printf("StepVel:%-8.3f==RightVel:%-8.2f==RightErr:%-8.2f==LeftVel:%-8.2f==LeftErr:%-8.2f%n",
+								stepFunctionSpeed,
+								getRightSensorVelocity(),
+								getRightCloseLoopError(),
+								getLeftSensorVelocity(),
+								getLeftCloseLoopError());
+		}
+
 		// Switch follower motors to move sideways
 		if (isMecanumShiftEnabled) {
 			rightFollowerMtr.set(ControlMode.Follower, driveLefttMasterMtr.getDeviceID());
@@ -719,7 +746,7 @@ public class SRXDriveBase {
 		if (SRXDriveBaseCfg.isSRXClosedLoopEnabled) {
 			rightMasterMtr.getFaults(rightFaults);
 			leftMasterMtr.getFaults(leftFaults);
-			If (rightFaults.SensorOutOfPhase || leftFaults.SensorOutOfPhase){
+			If (rightFaults.SensorOutOfPhase || leftFaults.SensorOutOfPhase) {
 
 				//Fault detected - change control mode to open loop percent output and stop motor
 				rightMasterMtr.set(ControlMode.PercentOutput,0);

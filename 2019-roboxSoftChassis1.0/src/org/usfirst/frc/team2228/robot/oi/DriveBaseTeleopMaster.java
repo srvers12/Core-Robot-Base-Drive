@@ -101,7 +101,7 @@ public class DriveBaseTeleopMaster {
 	
 	//==============================================
 	// TELEOPCONTROLLER CONSTRUCTOR
-	public DriveBaseTeleopControl(DriverIF     _driverIF, 
+	public DriveBaseTeleopMaster(DriverIF     _driverIF, 
 								  SRXDriveBase _driveBase,
 								  DebugLogger  _debuglogger) {
 		driverIF = _driverIF;

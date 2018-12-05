@@ -51,7 +51,7 @@ public class Robot extends IterativeRobot {
 		driveBaseCfg = new SRXDriveBaseCfg();
 
 		driveBaseTelopMaster = new DriveBaseTeleopMaster(driverIF, driveBase, logger);
-		testDriveBase = new SRXDriveBaseTest(driveBase, driveBaseCfg, logger);
+		testDriveBase = new SRXDriveBaseTest(driveBase, logger);
 		
 	}
 

@@ -49,6 +49,8 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 // public double getLeftEncoderVelocity()
 // public double getLeftMstrMtrCurrent()
 // public double getLeftFollowerMtrCurrent()
+// public double getRobotTrackWidth(){
+// public double getEncoderInchesPerCount(){
 // public double getLeftCloseLoopError()
 
 // public double getBusVoltage()
@@ -98,7 +100,7 @@ package org.usfirst.frc.team2228.robot.subsystems.drvbase;
 // +++++++++
 //
 // +++++++++
-// public boolean SRXmove(int    _rightCruiseVel, 
+// public boolean SRXBasemove(int    _rightCruiseVel, 
 //					   int    _rightAccel, 
 //					   double _rightDistance, 
 //					   int    _leftCruiseVel,	
@@ -233,7 +235,7 @@ public class SRXDriveBase {
 	private double methodTime = 0;
 	//private double rightSensorStartPositionRead = 0;
 	private double rightSensorPositionRead = 0;
-	//private double leftSensorStartPositionRead = 0;
+	private double leftSensorPositionRead = 0;
 	private double leftSensorPositionRead = 0;
 	private double Kp_encoderHeadingPID = 0.001;
 	private double Ki_encoderHeadingPID = 0;
@@ -460,11 +462,11 @@ public class SRXDriveBase {
 	public void setTestEnable(int _testNumber){
 		switch(_testnumber){
 			case 0:
-				isEncoderTestEnabled = false;
+				isMotorEncoderTestEnabled = false;
 				isStepTestEnabled = false;
 			break;
 			case 1:
-				isEncoderTestEnabled = true;
+				isMotorEncoderTestEnabled = true;
 			break;
 			case 2:
 				isStepTestEnabled = true;
@@ -608,7 +610,14 @@ public class SRXDriveBase {
 	public double getBusVoltage() {
 		return leftMasterMtr.getBusVoltage();
 	}
-	
+
+	public double getEncoderInchesPerCount(){
+		return SRXDriveBaseCfg.kInchesPerCount;
+	}
+	public double getRobotTrackWidth(){
+		return SRXDriveBaseCfg.kTrackWidthIn;
+	}
+
 	public boolean getIsDriveMoving() {
 		if ((Math.abs(leftMasterMtr.getSelectedSensorVelocity(SRXDriveBaseCfg.kPIDLoopIDx)) > 0.1) ||
 			(Math.abs(rightMasterMtr.getSelectedSensorVelocity(SRXDriveBaseCfg.kPIDLoopIDx)) > 0.1))
@@ -705,7 +714,7 @@ public class SRXDriveBase {
 		rightCmdLevel = _rightCMDLevel;
 		leftCmdLevel = _leftCMDLevel;
 		
-		if(isEncoderTestEnabled) {
+		if(isMotorEncoderTestEnabled) {
 			// +++++++++++++++++++++++++++++++++
 			// DATA DISPLAY FOR CHECKING ENCODERS AND ENCODER DIRECTION
 			System.out.printf("REnc:%-4.0f =RESen:%-4.0f =RESenRd:%-4.0f =LEnc:%-4.0f =LESen:%-4.0f =LESenRd:%-4.0f%n", 
@@ -800,7 +809,10 @@ public class SRXDriveBase {
 	// ======================================================================================
 	
 	public boolean move(double _MoveDistanceIn, double _MovePwrlevel) {
-		
+
+		rightSensorPositionRead = getRightSensorPosition();
+		leftSensorPositionRead = getLeftSensorPosition();
+
 		if(!isStdTrapezoidalMoveActive){
 			msg("START MOTION CALCULATIONS ==================================");
 			methodStartTime = Timer.getFPGATimestamp();
@@ -813,6 +825,7 @@ public class SRXDriveBase {
 			RightDistanceCnts = LeftDistanceCnts;
 			RightCruiseVelNativeUnits = LeftCruiseVelNativeUnits;
 			RightAccelNativeUnits = LeftAccelNativeUnits;
+			encoderHeadingDeg = (leftSensorPositionRead - rightSensorPositionRead) / SRXDriveBaseCfg.kTrackWidthIn;
 			
 			if (isConsoleDataEnabled || isLoggingDataEnabled){
 				msg(String.format("RgtD:,%-8.2f, RgtV:,%-8d, RgtA:,%-8d, LftD:,%-8.2f, LftV:,%-8d, LftA:,%-8d %n", 
@@ -823,13 +836,14 @@ public class SRXDriveBase {
 						LeftCruiseVelNativeUnits,
 						LeftAccelNativeUnits));
 			}
+			// todo - added else to print out encoders and heading
 		} else if(!SRXBaseMove(RightCruiseVelNativeUnits, 
 							   RightAccelNativeUnits, 
 							   RightDistanceCnts, 
 							   LeftCruiseVelNativeUnits, 
 							   LeftAccelNativeUnits, 
 							   LeftDistanceCnts,
-							   (LeftMoveTimeSec + 1)){
+							   (LeftMoveTimeSec + 1))){
 
 			isStdTrapezoidalMoveActive = false;
 			methodTime = Timer.getFPGATimestamp() - methodStartTime;
@@ -840,7 +854,7 @@ public class SRXDriveBase {
 		return isStdTrapezoidalMoveActive;
 		}
 	}
-	// todo - complete move over load
+	// todo - complete move overload for mecanum shift
 	public boolean move(double _MoveDistanceIn, double _MovePwrLevel, boolean _MoveSideways){
 
 	}
@@ -869,6 +883,7 @@ public class SRXDriveBase {
 						LeftCruiseVelNativeUnits,
 						LeftAccelNativeUnits));
 			}
+		// todo - add else to print out encoders and encoder heading
 		} else if(!SRXBaseMove(RightCruiseVelNativeUnits, 
 							   RightAccelNativeUnits, 
 							   RightDistanceCnts, 
@@ -887,7 +902,7 @@ public class SRXDriveBase {
 	// This method performs a SRX magic motion command from user calculated values
 	// All SRXBaseMove parms are in native units 
 	
-	public boolean SRXMove(int    _rightCruiseVel, 
+	public boolean SRXBaseMove(int    _rightCruiseVel, 
 						   int    _rightAccel, 
 						   double _rightDistance, 
 						   int    _leftCruiseVel,	
